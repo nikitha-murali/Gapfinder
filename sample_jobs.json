@@ -1,0 +1,31 @@
+{
+  "jobs": [
+    {
+      "title": "Sample: Junior Software Developer",
+      "company": "Example Studio",
+      "stipend": "Sample salary: ₹4–6 LPA",
+      "deadline": "Not applicable",
+      "apply_url": "",
+      "skills": ["Python", "SQL", "Git"],
+      "summary": "Illustrative entry-level role. Help build and test internal web tools with support from a senior developer."
+    },
+    {
+      "title": "Sample: Graduate Data Analyst",
+      "company": "Example Analytics",
+      "stipend": "Sample salary: ₹3–5 LPA",
+      "deadline": "Not applicable",
+      "apply_url": "",
+      "skills": ["Python", "SQL", "Data Analysis"],
+      "summary": "Illustrative graduate role. Prepare datasets, investigate trends, and share findings with product teams."
+    },
+    {
+      "title": "Sample: Associate Web Developer",
+      "company": "Example Digital",
+      "stipend": "Sample salary: ₹3–5 LPA",
+      "deadline": "Not applicable",
+      "apply_url": "",
+      "skills": ["JavaScript", "HTML", "CSS"],
+      "summary": "Illustrative entry-level role. Implement responsive web interfaces and help maintain existing applications."
+    }
+  ]
+}
