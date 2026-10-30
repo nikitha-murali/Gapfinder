@@ -1,0 +1,2021 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1a1e">
+<title>GapFinder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0b0d;--panel:#131417;--panel2:#0e0f11;--line:#25272c;--text:#ece8df;--muted:#8d8f96;--accent:#ff6a3d;--ok:#7bd88f;--info:#7cc4ff;--warn:#f2c14e;--bad:#ff7a7a}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Onest',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--text);line-height:1.55;
+background:radial-gradient(900px 480px at 85% -8%,rgba(255,106,61,.07),transparent),var(--bg)}
+ 
+/* ---- header ---- */
+.top{position:fixed;top:0;left:0;right:0;height:64px;z-index:30;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid transparent;transition:background .3s,border-color .3s}
+body:not([data-view=home]) .top{background:rgba(11,20,24,.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom-color:var(--line)}
+.word{font-weight:600;font-size:21px;letter-spacing:-.025em;text-decoration:none;display:inline-flex}
+.w1{color:var(--text)}.w2{color:var(--accent)}
+ 
+.theme-toggle{display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--text);cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
+.theme-toggle:hover{transform:translateY(-1px);border-color:var(--accent);background:var(--panel2)}
+.theme-toggle svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.theme-toggle .icon-moon{display:none}
+.theme-light .theme-toggle .icon-sun{display:none}
+.theme-light .theme-toggle .icon-moon{display:block}
+ 
+/* ---- floating side navigation (appears after upload) ---- */
+.rail{position:fixed;left:16px;top:50%;z-index:25;display:flex;flex-direction:column;gap:4px;padding:8px;background:rgba(19,20,23,.92);border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.45);
+opacity:0;pointer-events:none;transform:translateY(-50%) translateX(-14px);transition:opacity .35s,transform .45s cubic-bezier(.16,1,.3,1)}
+body.has-rail .rail{opacity:1;pointer-events:auto;transform:translateY(-50%)}
+.nav-item{position:relative;width:44px;height:44px;border-radius:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;text-decoration:none;transition:background .15s,color .15s}
+.nav-item svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-item:hover,.nav-item:focus-visible{background:#1d1f24;color:var(--text);outline:none}
+.nav-item.on{background:rgba(255,106,61,.14);color:var(--accent)}
+.badge{position:absolute;top:3px;right:3px;min-width:16px;height:16px;border-radius:99px;background:var(--accent);color:#1c0b04;font-size:10.5px;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px}
+.tip{position:absolute;left:calc(100% + 14px);top:50%;transform:translateY(-50%) translateX(-4px);background:#1a1c20;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;display:flex;gap:8px;align-items:center;color:var(--text)}
+.tip u{text-decoration:none;color:var(--accent);font-weight:600}
+.nav-item:hover .tip,.nav-item:focus-visible .tip{opacity:1;transform:translateY(-50%) translateX(0)}
+kbd{border:1px solid #30333a;background:#0e0f11;border-radius:5px;padding:1px 6px;font-size:11px;font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--muted)}
+ 
+.demo-pill{position:fixed;bottom:16px;right:16px;z-index:25;background:rgba(19,20,23,.9);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+.toggle{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:12.5px;margin:0;cursor:pointer}
+ 
+.main{position:relative;z-index:1;transition:margin .3s}
+body.has-rail .main{margin-left:84px}
+body[data-view=home] .rail{visibility:hidden}
+body[data-view=home].has-rail .main{margin-left:0}
+.wrap{max-width:920px;margin:0 auto;padding:92px 24px 0}
+body[data-view=home] footer{display:none}
+ 
+/* ---- home ---- */
+.homenote{position:fixed;left:32px;bottom:30px;z-index:2;max-width:360px}
+body.has-rail .homenote{left:104px}
+.homenote p{margin:0 0 10px;color:var(--muted);font-size:15px}
+.homenote .links{display:flex;gap:10px;align-items:center;font-size:14px;color:#5b5e66}
+.homenote a{color:var(--text);text-decoration:underline;text-decoration-color:#4a4d55;text-underline-offset:4px;cursor:pointer}
+.homenote a:hover{text-decoration-color:var(--accent)}
+ 
+/* ---- shared ---- */
+h2{margin:6px 0 4px;font-size:30px;letter-spacing:-.02em;font-weight:600}
+h3{font-weight:600}
+.sub{color:var(--muted);margin:0 0 18px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin:18px 0}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px}
+.chip{background:#1d1f24;border-radius:999px;padding:4px 11px;font-size:14px;cursor:pointer}
+.chip:after{content:" ×";color:var(--muted)}
+.chips input{flex:1;min-width:140px;background:none;border:0;outline:0;color:var(--text);font-size:15px;padding:4px;font-family:inherit}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:end}
+.row>div{flex:1;min-width:180px}
+select{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px;font-family:inherit}
+textarea{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:14px;font-family:inherit;resize:vertical}
+button,.btn{background:var(--accent);color:#1c0b04;border:0;border-radius:10px;padding:11px 20px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;display:inline-block;font-family:inherit}
+button:disabled{opacity:.45;cursor:not-allowed}
+.ghost{background:transparent;color:var(--text);border:1px solid var(--line);padding:8px 14px;font-size:14px;font-weight:500}
+.ghost:hover:not(:disabled){border-color:#4a4d55}
+.sm{padding:5px 10px;font-size:13px}
+.link{color:var(--info);font-size:14px;text-decoration:none}
+.meta{color:var(--muted);font-size:14px;margin-top:2px}
+.note{color:var(--muted);font-size:13px;margin:6px 0}.err{color:var(--bad)}
+.empty{color:var(--muted);padding:20px 0}
+ 
+/* ---- compact profile bar ---- */
+.profile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:6px 0 18px}
+.pbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.pleft{display:flex;gap:14px;align-items:center}
+.rpill{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:6px 10px;flex-wrap:wrap}
+.ficonS{width:28px;height:28px;border-radius:8px;background:rgba(255,106,61,.14);color:var(--accent);font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
+.rname{font-weight:500;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sline{margin-top:12px}
+ 
+/* ---- loading + Skill Pop ---- */
+.loading{display:none;margin:18px 0}
+.lhead{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.lhead b{font-size:16px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:s 1s linear infinite;flex:none}
+@keyframes s{to{transform:rotate(360deg)}}
+.ibar{height:3px;background:var(--panel2);border-radius:99px;overflow:hidden;margin:10px 0}
+.ibar i{display:block;height:100%;width:35%;background:var(--accent);border-radius:99px;animation:slide 1.4s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+.arena{position:relative;border:1px solid var(--line);border-radius:14px;background:var(--panel2);overflow:hidden;margin-top:12px}
+.ghud{display:flex;justify-content:space-between;padding:8px 14px;color:var(--muted);font-size:13px;border-bottom:1px solid var(--line)}
+.ghud b{color:var(--accent)}
+.gfield{position:relative;height:260px;overflow:hidden;user-select:none;-webkit-user-select:none}
+.bub{position:absolute;bottom:-44px;border:0;background:none;padding:0;cursor:pointer;animation:rise linear forwards}
+.bub span{display:block;padding:7px 14px;border-radius:999px;font-size:14px;font-weight:500;border:1px solid}
+.bub.ok span{background:rgba(123,216,143,.12);color:var(--ok);border-color:rgba(123,216,143,.35)}
+.bub.bug span{background:rgba(255,122,122,.12);color:var(--bad);border-color:rgba(255,122,122,.35)}
+.bub.gone{pointer-events:none}
+.bub.gone span{animation:pop .25s forwards}
+@keyframes rise{from{transform:translateY(0)}to{transform:translateY(-330px)}}
+@keyframes pop{to{transform:scale(1.7);opacity:0}}
+.gfield.shake{animation:shake .25s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+ 
+/* ---- cards ---- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;margin:14px 0;transition:border-color .2s}
+.card:hover{border-color:#3a3d44}
+.top2{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.title{font-size:18px;font-weight:600;letter-spacing:-.01em}
+.ring{--p:0;--c:var(--ok);width:58px;height:58px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),#24262b 0);display:grid;place-items:center;position:relative;flex:none}
+.ring::before{content:'';position:absolute;inset:5px;background:var(--panel);border-radius:50%}
+.ring b{position:relative;font-size:15px;font-weight:600}
+.ring small{font-size:10px;color:var(--muted);margin-left:1px}
+.sum{color:#c9c6bd;font-size:14px;margin:12px 0 0}
+.sec{margin-top:12px;font-size:14px}.sec b{color:var(--muted);font-weight:500;margin-right:6px}
+.tag{display:inline-block;border-radius:8px;padding:3px 9px;margin:3px 4px 3px 0;font-size:13px;text-decoration:none}
+.have{background:rgba(123,216,143,.12);color:var(--ok)}
+.gap{background:rgba(124,196,255,.12);color:var(--info)}
+.soft{background:rgba(242,193,78,.12);color:var(--warn)}
+.miss{background:rgba(255,122,122,.12);color:var(--bad)}
+.actions{display:flex;gap:14px;align-items:center;margin-top:14px;flex-wrap:wrap}
+.apply{color:var(--accent);font-weight:600;text-decoration:none}
+.close{background:rgba(242,193,78,.1);color:var(--warn);border-radius:10px;padding:8px 12px;margin-top:12px;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:18px 0}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.tile h3{margin:0 0 6px;font-size:15px}.tile p{margin:0;color:var(--muted);font-size:13px}
+.links a{color:var(--info);text-decoration:none;margin-right:14px;font-size:14px}
+.filter{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin:10px 0}
+.filter label{margin:0}.filter select{width:auto}
+#listTop{scroll-margin-top:80px}
+.pager{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;margin:26px 0 10px}
+.pbtn{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 13px;font-size:14px;font-weight:500;min-width:40px}
+.pbtn:hover:not(:disabled){border-color:#4a4d55}
+.pbtn.on{background:var(--accent);color:#1c0b04;border-color:var(--accent)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:40;padding:16px}
+.mbox{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:780px;width:100%;max-height:92vh;overflow:auto;padding:20px}
+.mbox.small{max-width:520px}
+.mhead{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}
+.viewtext{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:#cfccc3;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;max-height:50vh;overflow:auto;margin:0}
+footer{color:var(--muted);font-size:13px;padding:30px 0 50px}
+ 
+@media (max-width:700px){
+  .top{padding:0 16px}
+  .cta{padding:10px 14px 10px 12px;font-size:13.5px}
+  .homenote{left:20px;bottom:84px;max-width:260px}
+  body.has-rail .homenote{left:20px}
+  .rail{left:50%;top:auto;bottom:14px;flex-direction:row;transform:translateX(-50%) translateY(14px)}
+  body.has-rail .rail{transform:translateX(-50%)}
+  .tip{display:none}
+  body.has-rail .main{margin-left:0}
+  .main{padding-bottom:84px}
+  .wrap{padding:84px 16px 0}
+  .demo-pill{bottom:auto;top:12px;right:auto;left:50%;transform:translateX(-50%);display:none}
+  body:not([data-view=home]) .demo-pill{display:block}
+}
+@media (prefers-reduced-motion:reduce){.ibar i,.spin{animation:none}}
+ 
+/* ---- engineering workspace refresh ---- */
+:root{--bg:#0d131a;--panel:#151e27;--panel2:#101820;--line:#293744;--text:#e8eef4;--muted:#96a5b2;--accent:#ff784f;--ok:#72d6a0;--info:#80c7ff;--warn:#f0bf61;--bad:#ff8585}
+body{background:linear-gradient(180deg,#101821 0%,#0d131a 48%,#0b1117 100%);background-attachment:fixed}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.24;background-image:linear-gradient(rgba(138,166,190,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(138,166,190,.07) 1px,transparent 1px);background-size:36px 36px;mask-image:linear-gradient(to bottom,black,transparent 88%)}
+.top{height:68px;padding:0 clamp(20px,5vw,72px);background:rgba(13,19,26,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom-color:rgba(132,157,179,.16)}
+.word{font-size:20px;letter-spacing:-.04em}
+.w2{color:var(--accent)}
+.cta{border-radius:10px;padding:12px 17px;background:var(--accent);box-shadow:0 6px 20px rgba(255,120,79,.16);color:#25130e}
+.cta::before{display:none}
+.cta:hover{transform:translateY(-1px);background:#ff8964}
+.main{min-height:100vh}
+.wrap{max-width:1160px;padding:100px 32px 0}
+body.has-rail .wrap{max-width:1160px}
+.homenote{position:static;max-width:none}
+body.has-rail .homenote{left:auto}
+#v-home{display:block}
+.hero{position:relative;isolation:isolate;overflow:hidden;width:100%;min-height:calc(68svh - 60px);display:flex;align-items:center;padding:48px 0 38px}
+.hero-copy{position:relative;z-index:2;max-width:660px}
+.hero-map{position:absolute;z-index:0;top:-10%;right:-6%;width:74%;height:120%;overflow:visible;opacity:.5;pointer-events:none;mask-image:linear-gradient(90deg,transparent 0%,#000 34%,#000 88%,transparent 100%)}
+.hero-map-track,.hero-map-progress{fill:none;stroke:var(--water-river);stroke-linecap:round}
+.hero-map-track{stroke-width:18;opacity:.42}
+.hero-map-progress{stroke:var(--water-accent);stroke-width:4;stroke-dasharray:5 13;opacity:.9}
+.hero-map-nodes circle{fill:var(--bg);stroke:var(--water-sage);stroke-width:2.5}
+.hero-map-fish{fill:var(--water-peach);stroke:var(--water-ink);stroke-width:1.6;stroke-linejoin:round}
+.hero-map-fish circle{fill:#182326;stroke:none}
+.eyebrow,.hero-foot,.hero-code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.eyebrow{display:flex;align-items:center;gap:10px;color:#a8b7c4;font-size:11px;font-weight:600;letter-spacing:.13em}
+.status-dot{width:8px;height:8px;display:inline-block;flex:none;border-radius:50%;background:#79d7a4;box-shadow:0 0 12px rgba(121,215,164,.55)}
+.hero-code{color:#708493;font-size:10px;letter-spacing:.03em}
+.hero h1{max-width:630px;margin:22px 0 16px;font-size:clamp(42px,5.6vw,68px);font-weight:600;line-height:1.04;letter-spacing:-.055em}
+.hero h1 span{color:var(--accent)}
+.hero-lede{max-width:510px;margin:0;color:#a6b3be;font-size:17px;line-height:1.7}
+.hero-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:30px}
+.hero-primary,.hero-secondary{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 18px;border-radius:9px;font-size:14px;font-weight:600;text-decoration:none}
+.hero-primary{background:var(--accent);color:#25130e;box-shadow:0 8px 24px rgba(255,120,79,.15)}
+.hero-primary:hover{background:#ff8964;transform:translateY(-1px)}
+.hero-primary svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hero-secondary{border:1px solid #354451;background:rgba(20,30,39,.7);color:#d5dfe6}
+.hero-secondary:hover{border-color:#647787;background:#19242e}
+.hero-sample{font-family:inherit;cursor:pointer;min-height:42px;padding:0 8px;border-color:transparent;background:transparent}
+.hero-sample:hover{border-color:transparent;background:transparent;text-decoration:underline;text-underline-offset:4px}
+.hero-foot{display:flex;align-items:center;gap:10px;margin-top:17px;color:#788b99;font-size:11px;letter-spacing:.02em}
+.hero-foot a{color:#aab8c3;text-decoration:underline;text-decoration-color:#536474;text-underline-offset:3px;cursor:pointer}
+.hero-foot a:hover{color:var(--text);text-decoration-color:var(--accent)}
+.pipeline-demo-toggle{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:16px;padding:10px 12px;border:1px solid #3a4b59;border-radius:8px;background:rgba(255,255,255,.025);color:#d5dfe6;font-size:12px;font-weight:500;transition:border-color .18s,background .18s}
+.pipeline-demo-toggle:hover{border-color:#738493;background:rgba(255,255,255,.05)}
+.pipeline-demo-toggle span{color:var(--accent);font-size:15px;transition:transform .18s}
+.pipeline-demo-toggle[aria-expanded=true] span{transform:rotate(45deg)}
+.sample-match{display:none;margin-top:14px;padding:15px;border:1px solid #30404e;border-radius:9px;background:rgba(10,16,22,.55)}
+.sample-match.open{display:block;animation:sample-in .24s ease-out}
+@keyframes sample-in{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+.sample-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.sample-head strong{display:block;color:#e3eaf0;font-size:12px;font-weight:600}
+.sample-head small{display:block;margin-top:3px;color:#81919e;font-size:10px}
+.sample-label{color:#778996;font:10px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em}
+.sample-skills{display:flex;flex-wrap:wrap;gap:7px;margin:13px 0}
+.sample-skill{padding:5px 9px;border:1px solid #3b4b58;border-radius:6px;background:#17232d;color:#aab8c3;font-size:11px;transition:color .15s,border-color .15s,background .15s}
+.sample-skill[aria-pressed=true]{border-color:rgba(121,215,164,.4);background:rgba(121,215,164,.1);color:#91d9ad}
+.sample-skill:hover{border-color:#8293a0}
+.sample-score{display:flex;justify-content:space-between;align-items:baseline;color:#91a1ad;font-size:10px}
+.sample-score strong{color:#e6edf2;font:600 16px 'Onest',sans-serif}
+.sample-meter{height:5px;margin:8px 0 11px;overflow:hidden;border-radius:99px;background:#27343e}
+.sample-meter i{display:block;width:60%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff784f,#f4c16b);transition:width .25s ease}
+.sample-gaps{color:#81919e;font-size:10px;line-height:1.55}
+.sample-use{width:100%;margin-top:12px;padding:9px 12px;border-radius:7px;font-size:12px}
+.career-journey{position:relative;isolation:isolate;margin:0 -32px;padding:65px 32px 100px;border-top:1px solid rgba(132,157,179,.14);background:linear-gradient(180deg,rgba(14,22,29,.66),rgba(11,17,23,.32))}
+.journey-head{max-width:770px;margin:0 auto 54px;text-align:center}
+.journey-eyebrow{color:#91a1ad;font:11px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.13em}
+.journey-head h2{margin:12px 0 8px;font-size:clamp(28px,4vw,42px);letter-spacing:-.04em}
+.journey-head p{margin:0;color:#9baab6;font-size:14px}
+.journey-route{position:relative;max-width:1060px;margin:0 auto}
+.journey-track{position:absolute;z-index:-1;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.journey-track path{fill:none;stroke:#41515d;stroke-width:2;stroke-dasharray:3 10;stroke-linecap:round}
+.journey-track .journey-progress{stroke:#ff8964;stroke-width:2.5;stroke-dasharray:1;stroke-dashoffset:1;filter:drop-shadow(0 0 5px rgba(255,120,79,.45))}
+.journey-stop{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 72px minmax(0,1fr);align-items:start;gap:12px;min-height:250px;margin-bottom:58px;scroll-margin-top:94px}
+.journey-stop:last-child{margin-bottom:0}
+.journey-pin{position:relative;z-index:1;grid-column:2;grid-row:1;justify-self:center;display:grid;place-items:center;width:48px;height:48px;margin-top:22px;border:1px solid #ff8964;border-radius:50%;background:#16222b;color:#ff9a79;box-shadow:0 0 0 8px rgba(255,120,79,.07),0 0 36px rgba(255,120,79,.1);font:12px ui-monospace,SFMono-Regular,Consolas,monospace;cursor:pointer;transition:transform .2s,box-shadow .2s,background .2s}
+.journey-pin:hover{transform:scale(1.08);background:#ff784f;color:#28140d;box-shadow:0 0 0 12px rgba(255,120,79,.09),0 0 40px rgba(255,120,79,.2)}
+.journey-card{grid-column:3;grid-row:1;padding:24px;border:1px solid #2d3d49;border-radius:13px;background:rgba(18,27,36,.94);box-shadow:0 15px 48px rgba(0,0,0,.14)}
+.journey-stop:nth-of-type(even) .journey-card{grid-column:1}
+.journey-kicker{color:#ff9878;font:10px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.12em}
+.journey-card h3{margin:8px 0 5px;color:#e6edf2;font-size:20px;letter-spacing:-.02em}
+.journey-card>p{max-width:560px;margin:0;color:#96a6b2;font-size:13px;line-height:1.65}
+.journey-builder{margin-top:18px;padding:16px;border:1px solid #344552;border-radius:9px;background:rgba(10,16,22,.6)}
+.journey-builder-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.journey-builder-actions button,.journey-builder-actions a{font-size:12px}
+.journey-builder-actions a{color:#b7c4ce;text-decoration:underline;text-decoration-color:#536474;text-underline-offset:3px}
+.journey-skill-row{display:flex;gap:9px;margin-top:14px}
+.journey-skill-row input{min-width:0;flex:1;background:#101820;border:1px solid #344552;border-radius:8px;padding:10px 12px;color:var(--text);font:13px 'Onest',sans-serif}
+.journey-skill-row input::placeholder{color:#718391}
+.journey-skill-row button{padding:9px 14px;border-radius:8px;font-size:12px}
+.journey-skills{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.journey-skill{display:inline-flex;align-items:center;gap:7px;padding:5px 8px;border:1px solid rgba(121,215,164,.25);border-radius:6px;background:rgba(121,215,164,.08);color:#91d9ad;font-size:11px}
+.journey-skill button{padding:0;border:0;background:transparent;color:#91d9ad;font-size:14px;line-height:1}
+.journey-skill-empty{color:#778996;font-size:11px}
+.journey-info{display:flex;gap:10px;align-items:flex-start;margin-top:16px;padding:11px 12px;border:1px dashed #3c4d5a;border-radius:8px;color:#8798a5;font-size:11px}
+.journey-info .system-led{width:7px;height:7px;margin:4px 2px 0 0;background:#79d7a4;box-shadow:0 0 10px rgba(121,215,164,.4)}
+.journey-info b{color:#d2dce3;font-weight:500}
+.journey-cta{margin-top:16px;padding:10px 14px;border-radius:8px;font-size:12px}
+.journey-cta-secondary{margin-left:8px;padding:9px 12px;border:1px solid #3a4b59;border-radius:8px;background:transparent;color:#d5dfe6;font-size:12px}
+.journey-cta-secondary:hover{border-color:#738493;background:rgba(255,255,255,.04)}
+.journey-stop.is-current .journey-pin{background:#ff784f;color:#28140d}
+.journey-stop.is-current .journey-card{border-color:rgba(255,137,100,.42);box-shadow:0 0 0 1px rgba(255,137,100,.08),0 15px 48px rgba(0,0,0,.18)}
+.journey-sample{margin-top:12px}
+.journey-sample .pipeline-demo-toggle{margin-top:0}
+.journey-sample .sample-match{margin-top:10px}
+.pipeline-demo-toggle{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px 12px;border:1px solid #3a4b59;border-radius:8px;background:rgba(255,255,255,.025);color:#d5dfe6;font-size:12px;font-weight:500;transition:border-color .18s,background .18s}
+.pipeline-demo-toggle:hover{border-color:#738493;background:rgba(255,255,255,.05)}
+.pipeline-demo-toggle span{color:var(--accent);font-size:15px;transition:transform .18s}
+.pipeline-demo-toggle[aria-expanded=true] span{transform:rotate(45deg)}
+h2{color:var(--text);font-size:32px;letter-spacing:-.035em}
+.sub{color:#9baab6}
+.panel,.profile,.card,.tile{background:rgba(21,30,39,.92);border-color:#2b3945;border-radius:12px}
+.panel{box-shadow:0 10px 30px rgba(0,0,0,.1)}
+.card{padding:22px}
+.card:hover{border-color:#526474}
+.title{color:#edf2f6}
+.sum{color:#b4c0c9}
+.chips,select,textarea,.rpill,.arena,.mbox{background:#101820;border-color:#2d3b47;color:var(--text)}
+.chip{background:#202d38;color:#d5dfe7}
+.ghost{color:#d5dfe7;border-color:#364552}
+.ghost:hover:not(:disabled){border-color:#718391;background:rgba(255,255,255,.03)}
+.tag.have{background:rgba(114,214,160,.12);color:#84dcae}
+.tag.gap{background:rgba(128,199,255,.12);color:#91d0ff}
+.tag.soft{background:rgba(240,191,97,.12);color:#f3cb7c}
+.apply,.w2{color:var(--accent)}
+.ring::before{background:var(--panel)}
+.demo-pill{background:rgba(20,29,38,.94);border-color:#33424f;backdrop-filter:blur(12px)}
+button:focus-visible,a:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid #ff9a79;outline-offset:3px}
+ 
+@media (max-width:700px){
+  .top{height:62px;padding:0 16px}
+  .wrap{padding:80px 18px 0}
+  #v-home{min-height:0}
+  .hero{min-height:calc(74vh - 60px);padding:45px 0 54px}
+  .hero h1{font-size:clamp(40px,11vw,56px);margin-top:19px}
+  .hero-lede{font-size:15px}
+  .hero-actions{margin-top:24px}
+  .hero-primary,.hero-secondary{min-height:46px}
+  .hero-code{display:none}
+  .career-journey{margin:0 -18px;padding:48px 18px 70px}
+  .journey-head{margin-bottom:34px;text-align:left}
+  .journey-stop{grid-template-columns:42px minmax(0,1fr);gap:10px;min-height:0;margin-bottom:36px}
+  .journey-pin{grid-column:1;width:38px;height:38px;margin-top:17px}
+  .journey-card,.journey-stop:nth-of-type(even) .journey-card{grid-column:2;padding:17px}
+  .journey-card h3{font-size:18px}
+  .journey-track{left:0;width:42px}
+  .journey-track path{stroke-dasharray:2 8}
+  .journey-builder{padding:12px}
+  .journey-skill-row{flex-direction:column}
+  .journey-skill-row button{align-self:flex-start}
+  .journey-cta-secondary{margin:8px 0 0}
+  h2{font-size:28px}
+  .panel,.card{padding:17px}
+  .top2{align-items:flex-start}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+}
+</style>
+<style>
+:root{
+  --water-ink:#0b1418;--water-card:#14242a;--water-card-soft:#192c31;--water-line:#355158;
+  --water-text:#edf5ef;--water-muted:#b1c2bd;--water-dim:#849a95;--water-accent:#ff9a6b;
+  --water-sage:#a8d7b8;--water-lavender:#c8b9ee;--water-peach:#ffd0ad;--water-river:#426d70;
+}
+.career-journey{position:relative;isolation:isolate;margin:0 -32px;padding:64px 32px 94px;overflow:clip;
+  border-top:1px solid var(--water-line);background:radial-gradient(ellipse at 50% 12%,rgba(61,117,114,.15),transparent 40%),linear-gradient(180deg,#0d1a1e,var(--water-ink))}
+.career-journey:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.11;
+  background-image:repeating-linear-gradient(15deg,transparent 0 3px,rgba(226,246,236,.16) 4px,transparent 5px 9px);mask-image:linear-gradient(180deg,transparent,#000 15%,#000 85%,transparent)}
+.journey-head{position:relative;max-width:760px;margin:0 auto 28px;text-align:center}
+.journey-eyebrow{color:var(--water-sage);font:600 11px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.18em}
+.journey-head h2{margin:12px 0 7px;color:var(--water-text);font-size:clamp(30px,4vw,48px);letter-spacing:-.045em}
+.journey-head p{margin:0;color:var(--water-muted);font-size:15px}
+.journey-tracker{position:sticky;top:72px;z-index:10;display:flex;align-items:center;justify-content:center;gap:8px;max-width:max-content;margin:0 auto 22px;padding:7px 10px;border:1px solid rgba(123,158,153,.28);border-radius:999px;background:rgba(11,20,24,.9);box-shadow:0 10px 24px rgba(0,0,0,.2);backdrop-filter:blur(12px)}
+.journey-tracker button{display:grid;place-items:center;width:25px;height:25px;padding:0;border:1px solid var(--water-dim);border-radius:50%;background:transparent;color:var(--water-muted);font:600 10px ui-monospace,monospace;cursor:pointer;transition:transform .2s}
+.journey-tracker button.is-active{transform:scale(1.13);border-color:var(--water-accent);background:var(--water-accent);color:#28180f}
+.journey-tracker button.is-passed{border-color:var(--water-sage);background:var(--water-sage);color:#10231a}
+.journey-tracker-label{min-width:100px;margin-left:4px;color:var(--water-text);font-size:12px;font-weight:600}
+.journey-route{position:relative;max-width:1120px;margin:0 auto}
+.journey-track{position:absolute;z-index:0;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.journey-track path{fill:none;stroke:var(--water-river);stroke-width:3;stroke-linecap:round}
+.journey-track .journey-progress{stroke:var(--water-accent);stroke-width:4;stroke-dasharray:1;stroke-dashoffset:1;filter:drop-shadow(0 0 7px rgba(255,154,107,.62))}
+.journey-ripples{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.journey-ripple{position:absolute;width:18px;height:8px;border:1px solid rgba(159,216,199,.22);border-radius:50%;animation:ripple-drift 6s ease-in-out infinite alternate}
+.journey-ripple:nth-child(1){left:18%;top:12%;animation-delay:-2s}.journey-ripple:nth-child(2){right:16%;top:38%;animation-delay:-4s}
+.journey-ripple:nth-child(3){left:20%;top:67%;animation-delay:-1s}.journey-ripple:nth-child(4){right:20%;top:88%;animation-delay:-3s}
+@keyframes ripple-drift{to{transform:translate3d(8px,-11px,0);opacity:.28}}
+.journey-fish{position:absolute;z-index:4;top:0;left:0;width:58px;height:58px;display:grid;place-items:center;pointer-events:none;will-change:transform;filter:drop-shadow(0 5px 12px rgba(255,154,107,.28))}
+.journey-fish svg{width:100%;height:100%;overflow:visible;animation:fish-bob 2.2s ease-in-out infinite}
+.journey-fish-tail{transform-box:fill-box;transform-origin:75% 50%;animation:tail-wiggle var(--tail-speed,.32s) ease-in-out infinite alternate}
+@keyframes tail-wiggle{to{transform:rotate(15deg)}}
+@keyframes fish-bob{50%{translate:0 -3px}}
+.fish-bubble{position:absolute;right:4px;bottom:15px;width:5px;height:5px;border:1px solid rgba(172,225,211,.7);border-radius:50%;animation:bubble-rise 1.8s ease-out infinite}
+.fish-bubble:nth-child(2){right:-5px;bottom:7px;animation-delay:.6s}.fish-bubble:nth-child(3){right:8px;bottom:4px;width:3px;height:3px;animation-delay:1.1s}
+@keyframes bubble-rise{to{transform:translate3d(9px,-22px,0) scale(.5);opacity:0}}
+ 
+ 
+.journey-stop{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) 72px minmax(0,1fr);align-items:center;gap:12px;min-height:76vh;margin:0;scroll-margin-top:100px}
+.journey-pin{position:relative;z-index:3;grid-column:2;grid-row:1;justify-self:center;display:grid;place-items:center;width:48px;height:48px;margin:0;border:2px solid var(--water-dim);border-radius:50%;background:var(--water-ink);color:var(--water-muted);box-shadow:0 0 0 7px rgba(144,183,170,.08);font:600 12px ui-monospace,SFMono-Regular,Consolas,monospace;cursor:pointer;transition:transform .25s}
+.journey-pin:hover,.journey-pin:focus-visible{transform:scale(1.12);outline:none;border-color:var(--water-accent);box-shadow:0 0 0 11px rgba(255,154,107,.13),0 0 28px rgba(255,154,107,.35)}
+.journey-stop.is-upcoming .journey-pin{opacity:.64}
+.journey-pin:before{content:"";position:absolute;inset:-8px;border:1px solid var(--water-accent);border-radius:50%;opacity:0;transform:scale(.75);pointer-events:none}
+.journey-stop.is-active .journey-pin{transform:scale(1.3);border-color:var(--water-accent);background:var(--water-accent);color:#28180f;box-shadow:0 0 0 9px rgba(255,154,107,.16),0 0 34px rgba(255,154,107,.48)}
+.journey-stop.is-active .journey-pin:before{animation:node-pulse 1.7s ease-out infinite}
+.journey-stop.is-passed .journey-pin{border-color:var(--water-sage);background:var(--water-sage);color:#10231a}
+.journey-stop.is-passed .journey-pin{font-size:0}
+.journey-stop.is-passed .journey-pin:after{content:"✓";font:700 16px 'Onest',sans-serif}
+@keyframes node-pulse{50%{opacity:.12;transform:scale(1.5)}}
+.journey-card{position:relative;grid-column:3;grid-row:1;padding:25px;border:1px solid var(--water-line);border-radius:22px;background:linear-gradient(145deg,rgba(25,44,49,.97),rgba(17,34,39,.97));box-shadow:0 20px 52px rgba(0,0,0,.25);opacity:.78;transform:translateY(24px);transition:opacity .45s,transform .45s}
+.journey-stop[data-side=left] .journey-card{grid-column:1}
+.journey-card:before{content:"";position:absolute;top:36px;left:-42px;width:40px;border-top:2px dotted var(--water-river)}
+.journey-stop[data-side=left] .journey-card:before{left:auto;right:-42px}
+.journey-stop.is-active .journey-card{opacity:1;transform:translateY(0);border-color:rgba(255,154,107,.63);box-shadow:0 0 0 1px rgba(255,154,107,.14),0 24px 60px rgba(0,0,0,.28)}
+.journey-stop.is-passed .journey-card{opacity:.62;transform:none}
+.journey-kicker{color:var(--water-sage);font:600 10px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.14em}
+.journey-card h3{margin:9px 0 6px;color:var(--water-text);font-size:clamp(19px,2.1vw,25px);letter-spacing:-.03em}
+.journey-stop.is-active .journey-card h3{color:var(--water-accent)}
+.journey-card>p{max-width:560px;margin:0;color:var(--water-muted);font-size:14px;line-height:1.65}
+.journey-builder,.journey-mini,.journey-listings,.journey-honest-note{margin-top:16px;padding:15px;border:1px solid var(--water-line);border-radius:14px;background:rgba(7,17,20,.38)}
+.journey-builder-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.journey-builder-actions button,.journey-builder-actions a{font-size:12px}
+.journey-builder-actions a{color:var(--water-text);text-decoration:underline;text-decoration-color:var(--water-dim);text-underline-offset:3px}
+.journey-skill-row{display:flex;gap:9px;margin-top:14px}
+.journey-skill-row input{min-width:0;flex:1;background:var(--water-ink);border:1px solid var(--water-line);border-radius:10px;padding:10px 12px;color:var(--water-text);font:13px 'Onest',sans-serif}
+.journey-skill-row input::placeholder{color:var(--water-dim)}
+.journey-skill-row button{padding:9px 14px;border-radius:9px;font-size:12px}
+.journey-skills{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.journey-skill{display:inline-flex;align-items:center;gap:7px;padding:5px 8px;border:1px solid rgba(168,215,184,.35);border-radius:999px;background:rgba(168,215,184,.1);color:var(--water-sage);font-size:11px}
+.journey-skill button{padding:0;border:0;background:transparent;color:inherit;font-size:14px;line-height:1}
+.journey-skill-empty{color:var(--water-muted);font-size:11px}
+.journey-info{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:12px;border:1px dashed var(--water-line);border-radius:12px;color:var(--water-muted);font-size:12px}
+.journey-info b{color:var(--water-text);font-weight:600}
+.journey-cta{margin-top:15px;padding:10px 14px;border-radius:10px;font-size:12px}
+.journey-cta-secondary{margin-left:8px;padding:9px 12px;border:1px solid var(--water-line);border-radius:10px;background:transparent;color:var(--water-text);font-size:12px}
+.journey-cta-secondary:hover{border-color:var(--water-muted)}
+.journey-sample{margin-top:12px}
+.journey-sample .pipeline-demo-toggle{margin-top:0}
+.journey-sample .sample-match{margin-top:10px}
+.pipeline-demo-toggle{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px 12px;border:1px solid var(--water-line);border-radius:10px;background:rgba(255,255,255,.025);color:var(--water-text);font-size:12px;font-weight:500;transition:border-color .18s,background .18s}
+.pipeline-demo-toggle:hover{border-color:var(--water-muted);background:rgba(255,255,255,.05)}
+.pipeline-demo-toggle span{color:var(--water-accent);font-size:15px;transition:transform .18s}
+.pipeline-demo-toggle[aria-expanded=true] span{transform:rotate(45deg)}
+.journey-listings{display:grid;gap:8px;padding:11px}
+.journey-listing{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px;border:1px solid rgba(124,163,155,.25);border-radius:10px;background:rgba(255,255,255,.025)}
+.journey-listing strong{overflow:hidden;color:var(--water-text);font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.journey-listing span{color:var(--water-muted);font-size:11px}
+.journey-listing small{grid-column:1/-1;color:var(--water-sage);font-size:10px}
+.journey-listing-source{color:var(--water-muted);font-size:10px}
+.journey-skeleton{height:46px;border-radius:10px;background:linear-gradient(90deg,rgba(132,170,161,.08),rgba(180,222,204,.18),rgba(132,170,161,.08));animation:skeleton-wave 1.4s ease-in-out infinite}
+@keyframes skeleton-wave{50%{opacity:.5}}
+.journey-mini{display:flex;align-items:center;gap:12px}
+.journey-score{display:grid;place-items:center;width:54px;height:54px;flex:none;border:3px solid var(--water-peach);border-radius:50%;color:var(--water-peach);font-weight:700}
+.journey-mini-copy strong{display:block;color:var(--water-text);font-size:13px}
+.journey-mini-copy span{color:var(--water-muted);font-size:11px}
+.journey-pastel{color:var(--water-lavender)}.journey-pastel.sage{color:var(--water-sage)}.journey-pastel.peach{color:var(--water-peach)}
+.journey-honest-note{color:var(--water-muted);font-size:11px;line-height:1.55}
+.journey-stage-cta{display:flex;gap:8px;flex-wrap:wrap}
+.journey-celebrate{position:relative;overflow:hidden}
+.journey-celebrate.is-celebrating{animation:celebrate .7s ease-out}
+@keyframes celebrate{50%{transform:scale(1.025)}}
+.journey-live{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.journey-stop[tabindex]:focus-visible{outline:2px solid var(--water-accent);outline-offset:6px;border-radius:18px}
+.theme-light{--bg:#f2f7f3;--panel:#fff;--panel2:#edf4ef;--line:#cbd9d1;--text:#17302c;--muted:#49645b;--accent:#a44320;--water-ink:#f2f7f3;--water-card:#fff;--water-card-soft:#edf4ef;--water-line:#b6cdc3;--water-text:#17302c;--water-muted:#3f5b54;--water-dim:#718d82;--water-accent:#a44320;--water-sage:#39794f;--water-lavender:#665296;--water-peach:#a6512f;--water-river:#789f96;background:#f2f7f3;color:#17302c}
+.theme-light .top{background:rgba(242,247,243,.9);border-bottom-color:#cfddd6}
+.theme-light .w1{color:#17302c}
+.theme-light .demo-pill{background:rgba(255,255,255,.92);border-color:#b6cdc3;color:#17302c}
+.theme-light .profile,.theme-light .panel,.theme-light .card,.theme-light .tile{background:rgba(255,255,255,.95);border-color:#b6cdc3;color:#17302c}
+.theme-light .hero-lede,.theme-light .hero-foot{color:#3f5b54}
+.theme-light .hero-code{color:#49645b}
+.theme-light .hero-secondary{border-color:#b6cdc3;background:rgba(255,255,255,.84);color:#17302c}
+.theme-light .hero-foot a{color:#17302c}
+.theme-light .career-journey{background:radial-gradient(ellipse at 50% 12%,rgba(97,154,133,.17),transparent 40%),linear-gradient(180deg,#eaf4ee,#f5f8f4)}
+.theme-light .career-journey:before{opacity:.07}
+.theme-light .journey-tracker{background:rgba(255,255,255,.92);box-shadow:0 10px 24px rgba(30,67,53,.12)}
+.theme-light .journey-card{background:transparent;box-shadow:none}
+.theme-light .journey-builder,.theme-light .journey-mini,.theme-light .journey-listings,.theme-light .journey-honest-note{background:rgba(224,238,229,.7)}
+.theme-light .journey-skill-row input{background:#fff}
+.theme-light .journey-listing{background:rgba(255,255,255,.72)}
+.theme-light .journey-listing strong{color:#17302c}
+.theme-light .journey-card h3{color:#17302c}
+.theme-light .journey-pin{background:#f2f7f3}
+.theme-light .journey-stop.is-active .journey-pin{background:var(--water-accent);color:#fff}
+.theme-light .journey-stop.is-passed .journey-pin{color:#fff}
+@media(max-width:700px){
+  .career-journey{margin:0 -18px;padding:48px 18px 70px}
+  .journey-head{margin-bottom:20px;text-align:left}
+  .journey-head p{font-size:14px}
+  .journey-tracker{top:66px;max-width:100%;justify-content:flex-start;overflow-x:auto;margin-bottom:14px;padding:6px 8px}
+  .journey-tracker button{flex:none;width:24px;height:24px}
+  .journey-tracker-label{min-width:86px;font-size:11px}
+  .journey-stop{grid-template-columns:42px minmax(0,1fr);gap:10px;min-height:66vh;align-items:center}
+  .journey-pin{grid-column:1;width:38px;height:38px}
+  .journey-card,.journey-stop[data-side=left] .journey-card{grid-column:2;padding:17px}
+  .journey-card:before,.journey-stop[data-side=left] .journey-card:before{top:31px;left:-19px;right:auto;width:17px}
+  .journey-fish{width:44px;height:44px}
+  .journey-builder{padding:12px}
+  .journey-skill-row{flex-direction:column}
+  .journey-skill-row button{align-self:flex-start}
+  .journey-cta-secondary{margin:8px 0 0}
+}
+@media(prefers-reduced-motion:reduce){
+  .journey-fish,.journey-ripples,.fish-bubble{display:none!important}
+  .journey-track .journey-progress{stroke-dashoffset:0!important}
+  .journey-card{opacity:1!important;transform:none!important}
+  .journey-stop.is-active .journey-pin{animation:none}
+  .journey-skeleton{animation:none}
+}
+.journey-layout{display:grid;grid-template-columns:minmax(210px,.72fr) minmax(0,1.28fr);gap:clamp(28px,6vw,80px);max-width:1120px;margin:0 auto;align-items:start}
+.journey-map-column{position:sticky;top:88px;align-self:start;height:min(76vh,720px);min-height:470px;min-width:0}
+.journey-map-panel{--water-ink:#0b1418;--water-card:#14242a;--water-line:#355158;--water-text:#edf5ef;--water-muted:#b1c2bd;--water-dim:#849a95;--water-accent:#ff9a6b;--water-sage:#a8d7b8;--water-lavender:#c8b9ee;--water-peach:#ffd0ad;--water-river:#426d70;
+  position:relative;height:100%;padding:20px 14px 14px;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
+.journey-map-panel:after{display:none}
+.journey-map-column:before{content:"";position:absolute;inset:-8vh -5vw;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,rgba(28,85,83,.26),rgba(8,24,28,.12) 48%,transparent 72%)}
+.journey-map-heading{position:relative;z-index:2;display:grid;gap:4px;padding:0 8px}
+.journey-map-heading span{color:#a8d7b8;font:600 9px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.16em}
+.journey-map-heading strong{min-height:22px;color:#edf5ef;font-size:13px;font-weight:600}
+.journey-map-canvas{position:absolute;inset:40px 8px 20px;z-index:1}
+.journey-map-canvas .journey-track{inset:0;width:100%;height:100%;overflow:visible}
+.journey-map-canvas .journey-track path{fill:none;stroke:#426d70;stroke-width:7;stroke-linecap:round;stroke-dasharray:none}
+.journey-map-canvas .journey-track .journey-progress{stroke:#ff9a6b;stroke-width:8;stroke-dasharray:1;stroke-dashoffset:1;filter:drop-shadow(0 0 7px rgba(255,154,107,.56))}
+.journey-map-canvas .journey-ripples{inset:0;overflow:hidden}
+.journey-map-canvas .journey-ripple{width:24px;height:9px}
+.journey-map-canvas .journey-ripple:nth-child(1){left:10%;top:14%}.journey-map-canvas .journey-ripple:nth-child(2){right:8%;top:39%}
+.journey-map-canvas .journey-ripple:nth-child(3){left:8%;top:66%}.journey-map-canvas .journey-ripple:nth-child(4){right:9%;top:86%}
+.journey-map-nodes{position:absolute;inset:0;z-index:3}
+.journey-map-nodes button{position:absolute;left:var(--node-x);top:var(--node-y);display:grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid #849a95;border-radius:50%;background:#102126;color:#b1c2bd;font:600 9px ui-monospace,monospace;cursor:pointer;transform:translate(-50%,-50%);transition:transform .2s,opacity .2s}
+.journey-map-nodes button.is-active{transform:translate(-50%,-50%) scale(1.25);border-color:#ff9a6b;background:#ff9a6b;color:#28180f;box-shadow:0 0 0 6px rgba(255,154,107,.14),0 0 28px rgba(255,154,107,.4)}
+.journey-map-nodes button.is-passed{border-color:#a8d7b8;background:#a8d7b8;color:#10231a;font-size:0}
+.journey-map-nodes button.is-passed:after{content:"✓";font:700 14px 'Onest',sans-serif}
+.journey-map-nodes button:focus-visible{outline:2px solid #ffcfad;outline-offset:4px}
+.journey-map-caption{position:absolute;right:10px;bottom:15px;left:10px;z-index:2;text-align:center;color:#8da8a2;font-size:10px}
+.journey-map-panel .journey-fish{z-index:4;width:48px;height:48px}
+.journey-stages{min-width:0}
+.journey-stop{display:block;min-height:54vh;margin:0 0 10px;padding:12px 0;scroll-margin-top:110px}
+.journey-card{padding:24px;border-radius:22px;opacity:.68;transform:translateY(12px);transition:opacity .35s,transform .35s}
+.journey-stop.is-active .journey-card{opacity:1;transform:translateY(0)}
+.journey-stop.is-passed .journey-card{opacity:.62;transform:none}
+.journey-feature{height:0;overflow:hidden;visibility:hidden;opacity:0;transform:translateY(14px);transition:opacity .3s,transform .3s}
+.journey-stop.is-active .journey-feature{height:auto;overflow:visible;visibility:visible;opacity:1;transform:translateY(0)}
+.journey-stop.is-active .journey-card>p{margin-bottom:2px}
+.journey-stop[tabindex]:focus-visible{outline:2px solid var(--water-accent);outline-offset:4px}
+.theme-light .journey-map-panel{background:transparent}
+@media(max-width:700px){
+  .career-journey{padding-top:42px}
+  .journey-head{margin-bottom:22px}
+  .journey-head h2{font-size:clamp(27px,8vw,38px)}
+  .journey-head p{font-size:13px}
+  .journey-layout{grid-template-columns:54px minmax(0,1fr);gap:12px}
+  .journey-map-column{top:76px;height:calc(100svh - 156px);min-height:360px;max-height:620px}
+  .journey-map-panel{height:100%;padding:0}
+  .journey-map-heading,.journey-map-caption{display:none}
+  .journey-map-canvas{inset:8px 0}
+  .journey-map-canvas .journey-fish{width:38px;height:38px}
+  .journey-map-nodes button{width:30px;height:30px;font-size:8px}
+  .journey-map-nodes button.is-active{transform:translate(-50%,-50%) scale(1.18)}
+  .journey-stop{min-height:50vh;margin-bottom:8px;padding:8px 0}
+  .journey-card{padding:16px;border-radius:18px}
+  .journey-card h3{font-size:19px}
+  .journey-card>p{font-size:13px}
+  .journey-builder{padding:11px}
+  .journey-skill-row{flex-direction:column}
+  .journey-skill-row button{align-self:flex-start}
+  .journey-cta-secondary{margin:8px 0 0}
+}
+@media(prefers-reduced-motion:reduce){
+  .journey-map-column{position:relative;top:auto;height:auto;min-height:0}
+  .journey-map-panel{height:auto;min-height:0;padding:12px}
+  .journey-map-heading,.journey-map-caption{display:block}
+  .journey-map-canvas{position:relative;inset:auto;height:780px;margin-top:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  .journey-map-nodes button.is-active:before{animation:none}
+  .journey-feature{transition:none}
+  .journey-feature{height:auto;overflow:visible;visibility:visible;opacity:1;transform:none}
+}
+.product-nav{
+  position:fixed;top:68px;left:0;right:0;z-index:29;display:flex;justify-content:center;gap:6px;
+  min-height:42px;padding:5px 16px;border-bottom:1px solid rgba(132,157,179,.16);
+  background:rgba(13,19,26,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  overflow-x:auto;scrollbar-width:none
+}
+.product-nav::-webkit-scrollbar{display:none}
+.product-nav a{
+  flex:none;padding:6px 12px;border-radius:999px;color:#b1c2bd;text-decoration:none;
+  font-size:12px;font-weight:500;white-space:nowrap;transition:background .18s,color .18s
+}
+.product-nav a:hover,.product-nav a:focus-visible{background:rgba(255,154,107,.1);color:#edf5ef;outline:none}
+.product-nav a.on{background:rgba(255,154,107,.15);color:#ffb08a}
+.wrap{padding-top:124px}
+.challenge-intro{max-width:760px;margin:0 0 16px;color:var(--water-muted,#b1c2bd);font-size:14px}
+.challenge-disclaimer{margin-bottom:0}
+.theme-light .product-nav{background:rgba(242,247,243,.94);border-bottom-color:#cfddd6}
+.theme-light .product-nav a{color:#49645b}
+.theme-light .product-nav a:hover,.theme-light .product-nav a:focus-visible{color:#17302c}
+.theme-light .product-nav a.on{background:rgba(164,67,32,.1);color:#8f391d}
+.theme-light .challenge-intro{color:#3f5b54}
+@media(max-width:700px){
+  .product-nav{top:62px;justify-content:flex-start;gap:2px;padding:5px 12px}
+  .product-nav a{padding:6px 10px;font-size:11.5px}
+  .wrap{padding-top:116px}
+  .hero-actions{gap:9px}
+  .hero-primary,.hero-secondary{padding:0 13px;font-size:12px}
+  .theme-toggle{width:38px;height:38px}
+}
+ 
+body{background:radial-gradient(ellipse at 82% 4%,rgba(43,102,99,.17),transparent 38%),#0b1418}
+.hero{min-height:calc(68svh - 60px);padding-top:44px;padding-bottom:30px}
+.hero h1 span{color:var(--water-accent)}
+.hero-lede{color:var(--water-muted)}
+.hero-primary{background:var(--water-accent);color:#28180f;box-shadow:none}
+.hero-secondary{border-color:var(--water-line);background:rgba(20,36,42,.7);color:var(--water-text)}
+.hero-secondary:hover{border-color:#6b9290;background:var(--water-card)}
+.hero-foot{color:var(--water-dim)}
+.hero-foot a{color:var(--water-muted);text-decoration-color:var(--water-line)}
+.theme-light .top{background:rgba(242,247,243,.94);border-bottom-color:#cfddd6}
+.theme-light:not([data-view=home]) .top{background:rgba(242,247,243,.94)}
+.theme-light .theme-toggle{background:#fff;border-color:#b6cdc3;color:#17302c}
+.theme-light .theme-toggle:hover{background:#edf4ef}
+.theme-light .rail{background:rgba(255,255,255,.94);border-color:#b6cdc3;box-shadow:0 12px 40px rgba(30,67,53,.15)}
+.theme-light .nav-item:hover,.theme-light .nav-item:focus-visible{background:#edf4ef;color:#17302c}
+.theme-light .tip{background:#fff;border-color:#b6cdc3;color:#17302c}
+.theme-light kbd{background:#edf4ef;border-color:#cbd9d1;color:#49645b}
+.theme-light .chips,.theme-light select,.theme-light textarea,.theme-light .rpill,.theme-light .arena,.theme-light .mbox{background:#fff;border-color:#b6cdc3;color:#17302c}
+.theme-light .chip{background:#edf4ef;color:#17302c}
+.theme-light .ghost{color:#17302c;border-color:#b6cdc3}
+.theme-light .ghost:hover:not(:disabled){border-color:#789f96;background:#edf4ef}
+.theme-light .title{color:#17302c}
+.theme-light .sum{color:#3f5b54}
+.theme-light .tag.have{background:rgba(57,121,79,.12);color:#28613c}
+.theme-light .tag.gap{background:rgba(36,105,154,.12);color:#205c87}
+.theme-light .tag.soft{background:rgba(164,112,20,.12);color:#76520d}
+.theme-light .journey-builder{border:0;background:transparent}
+.theme-light .journey-mini,.theme-light .journey-honest-note{background:transparent}
+.theme-light .journey-listing{border-color:#cbd9d1;background:rgba(255,255,255,.8)}
+.theme-light .hero-secondary{border-color:#b6cdc3;background:rgba(255,255,255,.84);color:#17302c}
+.theme-light .hero-secondary:hover{border-color:#789f96;background:#edf4ef}
+.career-journey{margin-top:0;padding-top:34px;border-top:0;background:linear-gradient(180deg,rgba(13,26,30,.18),#0b1418 22%)}
+.journey-head{margin-bottom:12px}
+.journey-head h2{font-size:clamp(28px,3.8vw,42px)}
+.journey-layout{grid-template-columns:minmax(210px,.7fr) minmax(0,1.3fr);gap:clamp(28px,5vw,72px);max-width:1220px}
+.journey-map-column{top:122px;height:calc(100svh - 170px);min-height:420px;max-height:760px}
+.journey-map-canvas{inset:40px 8px 20px}
+.journey-stop{display:flex;align-items:center;min-height:calc(70svh - 112px);margin:0;padding:20px 0;scroll-margin-top:128px}
+.journey-card{width:100%;padding:clamp(24px,4vw,54px);border:0;border-radius:0;background:transparent;box-shadow:none;opacity:.58;transform:translateY(18px)}
+.journey-card:before{display:none}
+.journey-stop.is-active .journey-card{border:0;background:transparent;box-shadow:none}
+.journey-stop.is-passed .journey-card{opacity:.42}
+.journey-card h3{margin:12px 0 12px;font-size:clamp(34px,5vw,58px);line-height:1.04;letter-spacing:-.05em}
+.journey-card>p{max-width:700px;font-size:clamp(15px,1.5vw,18px);line-height:1.75}
+.journey-feature{transform:translateY(18px)}
+.journey-stop.is-active .journey-feature{margin-top:clamp(22px,4vh,42px)}
+.journey-builder,.journey-mini,.journey-listings,.journey-honest-note{margin-top:18px;padding:clamp(18px,2.4vw,30px);border-radius:18px}
+.journey-builder{padding:0;border:0;border-radius:0;background:transparent}
+.journey-mini{min-height:176px;padding:28px 0 28px 30px;border:0;border-left:2px solid var(--water-sage);border-radius:0;background:transparent}
+.journey-skill-row{max-width:720px}
+.journey-listings{gap:12px;padding:0;border:0;border-radius:0;background:transparent}
+.journey-listing{min-height:76px;padding:17px 18px}
+.journey-listing strong{font-size:14px}
+.journey-listing span{font-size:12px}
+.journey-listing small{font-size:11px}
+.journey-mini-copy strong{font-size:clamp(20px,2.2vw,27px)}
+.journey-mini-copy span{display:block;max-width:540px;margin-top:8px;font-size:15px;line-height:1.6}
+.journey-score{width:88px;height:88px;font-size:20px}
+.journey-honest-note{min-height:150px;padding:28px 0 28px 30px;border:0;border-left:2px solid var(--water-lavender);border-radius:0;background:transparent;font-size:clamp(17px,1.8vw,22px);line-height:1.7}
+.journey-cta{padding:12px 18px;font-size:13px}
+.journey-cta-secondary{padding:11px 15px;font-size:13px}
+.journey-stage-cta{margin-top:18px;gap:12px}
+.journey-map-caption{bottom:8px}
+.theme-light .career-journey{background:linear-gradient(180deg,rgba(234,244,238,.3),#f5f8f4 22%)}
+@media(max-width:700px){
+  .hero{min-height:calc(66svh - 60px);padding-top:30px;padding-bottom:24px}
+  .career-journey{padding-top:26px}
+  .journey-head{margin-bottom:12px}
+  .journey-head h2{font-size:clamp(26px,7vw,34px)}
+  .journey-head p{font-size:12px}
+  .journey-layout{grid-template-columns:48px minmax(0,1fr);gap:8px}
+  .journey-map-column{top:120px;height:calc(100svh - 164px);min-height:380px;max-height:680px}
+  .journey-map-panel{padding:0}
+  .journey-map-canvas{inset:8px 0}
+  .journey-stop{min-height:max(70svh,540px);padding:14px 0;scroll-margin-top:128px}
+  .journey-card{padding:16px 4px}
+  .journey-stop.is-active .journey-feature{margin-top:22px}
+  .journey-card h3{margin:8px 0 10px;font-size:clamp(30px,8vw,42px)}
+  .journey-card>p{font-size:14px;line-height:1.65}
+  .journey-builder{padding:0}
+  .journey-mini{min-height:150px;padding:20px 0 20px 18px}
+  .journey-listings{padding:0}
+  .journey-listing{grid-template-columns:minmax(0,1fr);min-height:66px;padding:12px}
+  .journey-honest-note{min-height:120px;padding:20px 0 20px 18px;font-size:16px}
+  .journey-mini-copy strong{font-size:19px}
+  .journey-mini-copy span{font-size:13px}
+  .journey-score{width:68px;height:68px;font-size:17px}
+  .journey-listing strong{white-space:normal}
+  .journey-listing small{grid-column:auto}
+  .journey-stage-cta{align-items:flex-start}
+  .journey-cta-secondary{margin-left:0}
+}
+@media(prefers-reduced-motion:reduce){
+  .journey-stop{min-height:auto;padding:28px 0}
+  .journey-card,.journey-stop.is-passed .journey-card{opacity:1}
+  .journey-card h3{font-size:clamp(26px,4vw,38px)}
+}
+ 
+body.has-rail .main{margin-left:0}
+body.has-rail .rail{display:none}
+.theme-light{
+  --bg:#f4f7f5;--panel:#fff;--panel2:#edf3ef;--line:#c8d6ce;
+  --text:#17302c;--muted:#52675f;--accent:#a44320;--ok:#287342;
+  --info:#245e85;--warn:#805d12;--bad:#a83333;
+  --water-ink:#f4f7f5;--water-card:#fff;--water-card-soft:#edf3ef;--water-line:#c4d5cc;
+  --water-text:#18332e;--water-muted:#49645b;--water-dim:#637d72;
+  --water-accent:#a44320;--water-sage:#286744;--water-lavender:#665296;
+  --water-peach:#a6512f;--water-river:#76998e;
+  color:var(--text);background:#f4f7f5
+}
+.theme-light .hero .eyebrow{color:#49645b}
+.theme-light .hero-code{color:#637b70}
+.theme-light .hero-lede,.theme-light .hero-foot{color:#425b52}
+.theme-light .hero-foot a{color:#234e3d;text-decoration-color:#8ba99a}
+.theme-light .journey-head h2,.theme-light .journey-card h3{color:#17302c}
+.theme-light .journey-head p,.theme-light .journey-card>p{color:#425b52}
+.theme-light .journey-kicker,.theme-light .journey-eyebrow{color:#286744}
+.theme-light .journey-map-column:before{background:radial-gradient(ellipse at 50% 50%,rgba(97,154,133,.18),rgba(213,232,220,.12) 48%,transparent 72%)}
+.theme-light .journey-map-panel{
+  --water-ink:#f4f7f5;--water-card:#fff;--water-line:#c4d5cc;--water-text:#18332e;
+  --water-muted:#49645b;--water-dim:#637d72;--water-accent:#a44320;
+  --water-sage:#286744;--water-lavender:#665296;--water-peach:#a6512f;
+  --water-river:#76998e
+}
+.theme-light .journey-map-heading span,.theme-light .journey-map-heading strong{color:#285744}
+.theme-light .journey-map-canvas .journey-track path{stroke:#8ba99a}
+.theme-light .journey-map-canvas .journey-track .journey-progress{stroke:#bd5632;filter:drop-shadow(0 0 6px rgba(164,67,32,.22))}
+.theme-light .journey-map-nodes button{border-color:#688579;background:#f8fbf9;color:#284b3d}
+.theme-light .journey-map-nodes button.is-active{border-color:#a44320;background:#a44320;color:#fff;box-shadow:0 0 0 6px rgba(164,67,32,.13)}
+.theme-light .journey-map-nodes button.is-passed{border-color:#39794f;background:#39794f;color:#fff}
+.theme-light .journey-map-caption{color:#49645b}
+.theme-light .journey-ripple{border-color:rgba(54,111,82,.28)}
+.theme-light .journey-listing{border-color:#cad9d0;background:rgba(255,255,255,.92)}
+.theme-light .journey-listing strong{color:#17302c}
+.theme-light .journey-listing span,.theme-light .journey-listing-source{color:#52675f}
+.theme-light .journey-listing small{color:#286744}
+.theme-light .journey-stop .journey-card{opacity:1}
+.theme-light .journey-stop:not(.is-active) .journey-card>p{opacity:0;transition:opacity .25s}
+.theme-light .journey-stop.is-active .journey-card>p{opacity:1}
+.theme-light .ring{background:conic-gradient(var(--c) calc(var(--p)*1%),#d7e1db 0)}
+.theme-light .journey-builder-actions a{color:#245e48;text-decoration-color:#8ba99a}
+.theme-light .journey-skill-row input{background:#fff;border-color:#bdcec4;color:#17302c}
+.theme-light .journey-skill-row input::placeholder{color:#667c72}
+.theme-light .journey-skill-empty,.theme-light .journey-info{color:#52675f}
+.theme-light .journey-info b{color:#17302c}
+.theme-light .journey-cta-secondary{border-color:#bdcec4;background:#fff;color:#17302c}
+.theme-light .journey-cta-secondary:hover{border-color:#789f8b;background:#edf3ef}
+.theme-light .journey-mini-copy strong{color:#17302c}
+.theme-light .journey-mini-copy span{color:#49645b}
+.theme-light .journey-score{color:#8e452a}
+.theme-light .journey-honest-note{color:#425b52}
+.theme-light .pipeline-demo-toggle{border-color:#bdcec4;background:#fff;color:#17302c}
+.theme-light .pipeline-demo-toggle:hover{border-color:#789f8b;background:#edf3ef}
+.theme-light .sample-match{border-color:#c8d6ce;background:#fff}
+.theme-light .sample-head strong,.theme-light .sample-score strong{color:#17302c}
+.theme-light .sample-head small,.theme-light .sample-label,.theme-light .sample-score,.theme-light .sample-gaps{color:#52675f}
+.theme-light .sample-skill{border-color:#bdcec4;background:#f5f8f6;color:#425b52}
+.theme-light .sample-skill[aria-pressed=true]{border-color:#77a389;background:#e8f3eb;color:#245e3d}
+.theme-light .sample-meter{background:#dce7e0}
+.theme-light .sub,.theme-light .meta,.theme-light .note,.theme-light .empty{color:#52675f}
+.theme-light .sec b{color:#49645b}
+.theme-light .viewtext{color:#243f36}
+.theme-light .close{background:#f8edcf;color:#684e14}
+.theme-light .journey-stop.is-passed .journey-card{opacity:.55}
+.theme-light button:focus-visible,.theme-light a:focus-visible,.theme-light select:focus-visible,
+.theme-light textarea:focus-visible,.theme-light input:focus-visible{outline-color:#8b3a20}
+@media(max-width:700px){
+  .hero{min-height:calc(62svh - 60px)}
+  .hero-map{top:-3%;right:-40%;width:132%;height:108%;opacity:.34;transform:translateX(0);mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.12) 36%,#000 58%,#000 100%)}
+  .hero-copy{max-width:100%}
+  .hero h1{max-width:560px}
+  .hero-actions{gap:7px}
+  .hero-sample{padding:0 5px}
+}
+@media(prefers-reduced-motion:reduce){
+  .hero-map-progress{stroke-dasharray:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .theme-light .journey-stop:not(.is-active) .journey-card>p{opacity:1}
+}
+</style>
+<style>
+/* ===== site refresh: sample-site type + pill buttons. The journey (map, fish, bubbles, colours) is untouched. ===== */
+:root{--display:'Unbounded','Onest',system-ui,sans-serif;--top:72px;--pad:clamp(18px,4vw,56px);--on-accent:#28180f}
+.theme-light{--on-accent:#fff}
+html.snap{scroll-snap-type:none}
+ 
+/* header */
+.top{height:auto;min-height:var(--top);gap:18px;padding:0 var(--pad);justify-content:flex-start;background:rgba(11,20,24,.9);border-bottom:1px solid var(--water-line)}
+body:not([data-view=home]) .top{background:rgba(11,20,24,.9)}
+.theme-light .top,.theme-light:not([data-view=home]) .top{background:rgba(244,247,245,.94)}
+.word{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.02em;flex:none}
+.nav{display:flex;gap:4px;margin-left:auto;align-items:center}
+.nav a{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:999px;font-size:14px;font-weight:500;text-decoration:none;color:var(--water-muted);white-space:nowrap;transition:background .15s,color .15s}
+.nav a:hover{color:var(--water-text)}
+.nav a.on{background:var(--water-text);color:var(--water-ink)}
+.badge{position:static;display:none;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--water-accent);color:var(--on-accent);font-size:11px;font-weight:700;align-items:center;justify-content:center}
+.hello{color:var(--water-muted);font-size:14px;white-space:nowrap}
+.hello:empty{display:none}
+.theme-toggle{border-color:var(--water-text);background:transparent;color:var(--water-text);flex:none}
+ 
+/* inner page frame */
+.wrap{max-width:1180px;padding:calc(var(--top) + 48px) var(--pad) 40px}
+body[data-view=home] .wrap{max-width:none;padding:0}
+.page-title{font-family:var(--display);font-weight:800;font-size:clamp(26px,3.6vw,50px);line-height:1.06;letter-spacing:-.025em;margin:0 0 14px;color:var(--water-text)}
+.sub{color:var(--water-muted);font-size:16px;max-width:640px;margin:0 0 24px}
+.panel,.profile,.card,.tile{background:var(--water-card);border:1px solid var(--water-line);color:var(--water-text);box-shadow:none}
+.panel{border-radius:24px}
+.profile{border-radius:22px}
+.card{border-radius:24px;padding:24px}
+.card:hover{border-color:var(--water-dim)}
+.tile{border-radius:20px}
+.title{color:var(--water-text)}
+.sum{color:var(--water-muted)}
+.ring::before{background:var(--water-card)}
+.apply{color:var(--water-accent)}
+ 
+/* buttons */
+.primary,.journey-cta{display:inline-flex;align-items:center;gap:10px;border:0;border-radius:999px;background:var(--water-accent);color:var(--on-accent);font:700 13px 'Onest',sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:13px 26px;margin-top:0;cursor:pointer;transition:transform .15s}
+.primary:hover,.journey-cta:hover{transform:translateY(-1px)}
+.primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.journey-cta-secondary{display:inline-flex;align-items:center;border:1.5px solid var(--water-text);border-radius:999px;background:transparent;color:var(--water-text);font:700 13px 'Onest',sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:12px 24px;margin-left:0;cursor:pointer}
+.journey-cta-secondary:hover{background:var(--water-text);color:var(--water-ink)}
+.journey-stage-cta{gap:12px}
+.ghost{border-radius:999px;border:1.5px solid var(--water-line);color:var(--water-text);padding:9px 18px;font-weight:600}
+.ghost.sm{padding:5px 12px}
+.ghost:hover:not(:disabled){border-color:var(--water-text);background:transparent}
+.pbtn{border-radius:999px;background:transparent;border:1.5px solid var(--water-line);color:var(--water-text);padding:8px 15px;font-weight:600}
+.pbtn:hover:not(:disabled){border-color:var(--water-text)}
+.pbtn.on{background:var(--water-text);color:var(--water-ink);border-color:var(--water-text)}
+.theme-light .primary,.theme-light .journey-cta{color:#fff}
+ 
+/* inputs */
+select,.fld{background:var(--water-ink);color:var(--water-text);border:1.5px solid var(--water-line);border-radius:999px;padding:11px 18px;font:15px 'Onest',sans-serif}
+.fld{width:100%}
+textarea{background:var(--water-ink);color:var(--water-text);border:1.5px solid var(--water-line);border-radius:18px}
+.chips{background:var(--water-ink);border:1.5px solid var(--water-line);border-radius:24px}
+.chip{background:var(--water-card-soft);color:var(--water-text)}
+.journey-skill-row input{border-radius:999px;border-width:1.5px;padding:12px 18px}
+.theme-light select,.theme-light .fld,.theme-light textarea,.theme-light .chips{background:#fff;border-color:#bdcec4;color:#17302c}
+.theme-light .chip{background:#e6efe9;color:#17302c}
+.mbox{background:var(--water-card);border:1px solid var(--water-line);border-radius:26px;color:var(--water-text)}
+.viewtext{background:var(--water-ink);border-color:var(--water-line)}
+.theme-light .viewtext{background:#f4f7f5;color:#17302c}
+.arena{background:var(--water-ink);border-color:var(--water-line);border-radius:22px}
+.demo-pill{background:var(--water-card);border-color:var(--water-line)}
+ 
+/* level switch */
+.seg{display:inline-flex;border:1.5px solid var(--water-text);border-radius:999px;padding:3px;margin:0 0 20px}
+.seg button{background:transparent;color:var(--water-text);border:0;padding:9px 20px;border-radius:999px;font:600 13.5px 'Onest',sans-serif;cursor:pointer}
+.seg button.on{background:var(--water-text);color:var(--water-ink)}
+.seg small{font-weight:500;opacity:.7;margin-left:4px}
+ 
+/* roadmap */
+.stage{margin:44px 0 0}
+.stage h3{font-family:var(--display);font-weight:800;font-size:clamp(20px,2.4vw,30px);letter-spacing:-.02em;margin:0 0 4px}
+.stage .when{color:var(--water-muted);font-size:14px;margin:0 0 8px}
+.rm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:18px 0;border-top:1.5px solid var(--water-line)}
+.rm-name{font-size:18px;font-weight:600}
+.learned{margin-top:44px}
+.learned h3{font-size:16px;margin:0 0 10px;color:var(--water-muted)}
+ 
+/* footer */
+footer.sitefoot{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;border-top:1px solid var(--water-line);margin-top:64px;padding:40px 0 70px}
+.word.big{font-size:clamp(26px,4vw,48px)}
+.sitefoot p{color:var(--water-muted);font-size:13.5px;max-width:420px;margin:0}
+ 
+/* journey: only layout/typography of the stage text; map, fish, bubbles and colours stay as they were */
+.career-journey{margin:0;padding:0 var(--pad)}
+.journey-map-column{top:calc(var(--top) + 16px);height:calc(100svh - var(--top) - 40px);min-height:420px;max-height:780px}
+.journey-stop{min-height:100svh;padding:var(--top) 0 24px;scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:0}
+.journey-card h3{font-family:var(--display);font-weight:800;font-size:clamp(26px,3.2vw,46px);line-height:1.1;letter-spacing:-.03em}
+.journey-kicker{font:600 13px var(--display);letter-spacing:.04em;color:var(--water-accent)}
+.journey-card>p{font-size:clamp(15px,1.3vw,17px)}
+.journey-listing{border-radius:18px}
+ 
+/* first stop = a full page */
+.pp{max-width:620px}
+.pp label{display:block;margin:0 0 6px;color:var(--water-muted);font-size:13px;font-weight:500}
+.pp label span{opacity:.7;font-weight:400}
+.pp-name{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.pp-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.pp-row .seg{margin:0}
+.pp-link{background:none;border:0;padding:0;color:var(--water-text);font:500 14px 'Onest',sans-serif;text-decoration:underline;text-decoration-color:var(--water-dim);text-underline-offset:4px;cursor:pointer}
+.pp-go{margin:20px 0 0}
+.pp .journey-skills{min-height:8px}
+ 
+@media (max-width:860px){
+  :root{--top:104px}
+  .top{flex-wrap:wrap;padding-top:10px;padding-bottom:6px;row-gap:4px}
+  .hello{margin-left:auto}
+  .theme-toggle{margin-left:0}
+  .nav{order:3;width:100%;margin-left:0;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+  .nav::-webkit-scrollbar{display:none}
+  .journey-map-column{top:calc(var(--top) + 6px);height:calc(100svh - var(--top) - 20px);min-height:360px;max-height:680px}
+  .journey-stop{min-height:max(100svh,560px);padding:var(--top) 0 16px}
+  .journey-card h3{font-size:clamp(23px,6.4vw,32px)}
+  .pp-name{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){html.snap{scroll-snap-type:none}}
+ 
+/* ---- added: confetti, demo banner, chip buttons, safe-area ---- */
+.fx{position:fixed;inset:0;width:100%;height:100%;z-index:60;pointer-events:none}
+.demo-banner{margin:0 0 14px;padding:12px 14px;border:1px solid rgba(240,191,97,.5);border-radius:10px;background:rgba(240,191,97,.12);color:var(--water-text,#edf5ef);font-size:14px;line-height:1.5}
+.demo-banner[hidden]{display:none}
+button.chip{border:0;font:inherit;font-size:14px;font-weight:400}
+.top{padding-top:env(safe-area-inset-top,0px)}
+.journey-tracker{top:calc(var(--top,72px) + env(safe-area-inset-top,0px) - 4px)}
+.journey-fish{filter:none}
+</style>
+</head>
+<body data-view="home">
+ 
+<header class="top">
+  <a class="word" href="#home" aria-label="GapFinder home"><span class="w1">Gap</span><span class="w2">Finder</span></a>
+  <nav class="nav" id="nav" aria-label="Explore GapFinder">
+    <a href="#home" data-v="home">Home</a>
+    <a href="#internships" data-v="internships">Internships</a>
+    <a href="#stretch" data-v="stretch">Stretch picks <span class="badge" id="badgeStretch">0</span></a>
+    <a href="#practice" data-v="practice">Practice</a>
+    <a href="#roadmap" data-v="roadmap">Roadmap</a>
+    <a href="#challenges" data-v="challenges">Challenges</a>
+  </nav>
+  <span class="hello" id="hello"></span>
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to day mode" title="Switch to day mode" aria-pressed="false">
+    <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+    <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8 8.5 8.5 0 1 0 20.2 15.4Z"/></svg>
+  </button>
+</header>
+ 
+<div class="demo-pill"><label class="toggle"><input type="checkbox" id="demo" checked><span id="demoLabel">Demo mode</span></label></div>
+ 
+<main class="main"><div class="wrap">
+ 
+  <input type="file" id="resumeFile" accept=".pdf,.docx,.txt,.md" hidden>
+ 
+  <div class="profile" id="profile" style="display:none">
+    <div class="pbar">
+      <div class="pleft" id="resumeSlot">
+        <button class="ghost sm" id="upBtn" type="button">Upload resume</button>
+        <a href="#" class="link" id="pasteOpen">paste text</a>
+      </div>
+      <div class="rpill" id="resumePill" style="display:none">
+        <span class="ficonS">CV</span>
+        <span class="rname" id="rName">Resume</span>
+        <span class="meta" id="rMeta" style="margin:0"></span>
+        <button class="ghost sm" id="rView" type="button">View</button>
+        <button class="ghost sm" id="rReplace" type="button">Replace</button>
+        <button class="ghost sm" id="rRemove" type="button">Remove</button>
+      </div>
+    </div>
+    <div id="resumeNote" class="meta"></div>
+    <div class="sline">
+      <label>Your skills (press Enter to add, click a skill to remove it)</label>
+      <div class="chips" id="chips"><input id="skillInput" placeholder="e.g. python, sql, react"></div>
+    </div>
+  </div>
+ 
+  <section id="v-home">
+    <div id="journeyMount"></div>
+  </section>
+ 
+  <section id="v-internships" style="display:none">
+    <h2 class="page-title" id="intTitle">Internships</h2><p class="sub" id="intSub">Live listings, scored against your skills.</p>
+    <div class="seg" role="group" aria-label="Career level">
+      <button type="button" data-level="fresher" class="on">Fresher internships</button>
+      <button type="button" data-level="graduate">Graduate jobs <small>beta</small></button>
+    </div>
+    <p class="demo-banner" role="status" hidden><b>Demo mode.</b> These are illustrative examples, not live openings. Switch the bottom-corner toggle to “Live agent” to search real listings.</p>
+    <div class="panel"><div class="row">
+      <div><label for="source">Search area</label>
+        <select id="source"><option value="cs">Computer science</option><option value="web">Web development</option><option value="data">Data science</option></select></div>
+      <button class="primary" id="go1" type="button">Find internships</button></div></div>
+    <div class="filter"><label for="minpct">Minimum match</label>
+      <select id="minpct"><option value="0" selected>Show all</option><option value="30">30% and up</option><option value="50">50% and up</option><option value="70">70% and up</option></select></div>
+    <div id="listTop"></div>
+    <div class="loading" id="load1">
+      <div class="lhead"><span class="spin"></span><b id="loadTitle">Finding internships for you</b></div>
+      <div class="meta">Pop your skills while you wait. Avoid the bugs.</div>
+      <div class="ibar"><i></i></div>
+      <div class="arena" id="arena1"><div class="ghud"><span>Score <b class="gscore">0</b></span><span>Best <b class="gbest">0</b></span></div><div class="gfield"></div></div>
+    </div>
+    <div id="note1"></div><div id="res1"></div>
+    <div class="pager" id="pager"></div>
+  </section>
+ 
+  <section id="v-stretch" style="display:none">
+    <h2 class="page-title">Stretch picks</h2><p class="sub">Roles you don't fully match yet. Close one or two gaps and they become realistic.</p>
+    <div id="stretchOut"></div>
+  </section>
+ 
+  <section id="v-practice" style="display:none">
+    <h2 class="page-title">Practice</h2><p class="sub">Your skill gaps, turned into things to practise.</p>
+    <div id="practiceOut"></div>
+  </section>
+ 
+  <section id="v-roadmap" style="display:none">
+    <h2 class="page-title">Your roadmap</h2><p class="sub">The skills your matched listings ask for and you do not have yet, ordered by how often they come up.</p>
+    <div id="roadmapOut"></div>
+  </section>
+ 
+  <section id="v-challenges" style="display:none">
+    <h2 class="page-title">Company challenges &amp; hackathons</h2><p class="sub">Find company-sponsored hackathons, case competitions, and real-world problem statements that fit your skills.</p>
+    <p class="demo-banner" role="status" hidden><b>Demo mode.</b> These are illustrative examples, not live openings. Switch the bottom-corner toggle to “Live agent” to search real listings.</p>
+    <div class="panel">
+      <p class="challenge-intro">GapFinder searches live competition listings and ranks them against your skills. Organizer, prompt, reward, and deadline are shown when the original listing provides them.</p>
+      <button class="primary" id="go2" type="button">Find company challenges</button>
+      <p class="note challenge-disclaimer">Demo mode shows illustrative examples, not current opportunities. Turn demo mode off to search live listings when live search is enabled.</p>
+    </div>
+    <div class="loading" id="load2">
+      <div class="lhead"><span class="spin"></span><b>Finding company challenges for you</b></div>
+      <div class="meta">Pop your skills while you wait. Avoid the bugs.</div>
+      <div class="ibar"><i></i></div>
+      <div class="arena" id="arena2"><div class="ghud"><span>Score <b class="gscore">0</b></span><span>Best <b class="gbest">0</b></span></div><div class="gfield"></div></div>
+    </div>
+    <div id="note2"></div><div id="res2"></div>
+  </section>
+ 
+  <footer class="sitefoot"><a class="word big" href="#home"><span class="w1">Gap</span><span class="w2">Finder</span></a>
+    <p>Built with TinyFish web agents. Always check details on the original listing before applying.</p></footer>
+</div></main>
+ 
+<div class="modal" id="pasteModal"><div class="mbox small">
+  <div class="mhead"><b>Paste your resume</b><button class="ghost sm" id="pasteClose" type="button">Cancel</button></div>
+  <textarea id="resumeText" rows="9" placeholder="Paste your resume text here"></textarea>
+  <div class="actions"><button class="primary" id="pasteUse" type="button">Find my skills</button><span class="meta">The text is cleared once your skills are found.</span></div>
+</div></div>
+ 
+<div class="modal" id="viewModal"><div class="mbox small">
+  <div class="mhead"><b id="vTitle">Resume</b><button class="ghost sm" id="vClose" type="button">Close</button></div>
+  <pre class="viewtext" id="vText"></pre>
+</div></div>
+ 
+<div class="modal" id="modal"><div class="mbox">
+  <div class="mhead"><b id="mtitle"></b><button class="ghost" id="mclose" type="button">Close</button></div>
+  <div id="mbody"></div>
+  <label style="margin-top:14px">Tailored resume (you can edit this)</label>
+  <textarea id="mtext" rows="14"></textarea>
+  <div class="actions"><button class="primary" id="mcopy" type="button">Copy</button><button class="ghost" id="mdl" type="button">Download .txt</button><span class="meta" id="mmsg"></span></div>
+</div></div>
+ 
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const q = encodeURIComponent;
+const clamp = (v,a,b) => v < a ? a : (v > b ? b : v);
+function JourneyMap({steps,pathData,onStepChange}){
+  const section = document.createElement('section');
+  section.className = 'career-journey';
+  section.id = 'careerJourney';
+  section.setAttribute('aria-label','GapFinder journey');
+  const nodePoints=[{x:50},{x:73},{x:50},{x:27},{x:50},{x:73}];
+  section.innerHTML = `
+    <div class="journey-layout">
+      <aside class="journey-map-column" aria-label="Career journey map">
+        <div class="journey-map-panel">
+          <div class="journey-map-heading"><span>SWIM GUIDE</span><strong id="journeyTrackerLabel">${esc(steps[0].title)}</strong></div>
+          <div class="journey-map-canvas" id="journeyMapCanvas">
+            <svg class="journey-track" viewBox="0 0 260 800" preserveAspectRatio="none" aria-hidden="true">
+              <path class="journey-unseen" d="${pathData}"></path><path class="journey-progress" d="${pathData}"></path>
+            </svg>
+            <div class="journey-ripples" aria-hidden="true"><i class="journey-ripple"></i><i class="journey-ripple"></i><i class="journey-ripple"></i><i class="journey-ripple"></i></div>
+            <div class="journey-fish" id="journeyFish" aria-hidden="true">
+              <svg viewBox="0 0 64 64" role="presentation">
+                <g class="journey-fish-tail"><path d="M20 34 8 25v18l12-9Z" fill="var(--water-accent)" stroke="var(--water-ink)" stroke-width="2" stroke-linejoin="round"/></g>
+                <path d="M17 34c0-10 8-17 20-17 11 0 18 7 18 17s-7 17-18 17c-12 0-20-7-20-17Z" fill="var(--water-peach)" stroke="var(--water-ink)" stroke-width="2"/>
+                <path d="M31 19c4-5 10-6 14-4l-3 7" fill="var(--water-accent)" stroke="var(--water-ink)" stroke-width="2" stroke-linejoin="round"/>
+                <circle cx="45" cy="31" r="2.3" fill="#182326"/><path d="M52 38q3 2 5 0" fill="none" stroke="#542f25" stroke-width="1.7" stroke-linecap="round"/>
+                <path d="m27 17 10-6 11 6-11 5-10-5Zm4 2v5q6 4 12 0v-5" fill="var(--water-lavender)" stroke="var(--water-ink)" stroke-width="1.6" stroke-linejoin="round"/>
+              </svg><i class="fish-bubble"></i><i class="fish-bubble"></i><i class="fish-bubble"></i>
+            </div>
+            <nav class="journey-map-nodes" aria-label="Journey checkpoints">
+              ${steps.map((step,index)=>`<button type="button" data-journey-index="${index}" data-node-x="${[130,190,130,70,130,190][index]}" data-node-y="${[56,194,333,472,611,750][index]}" style="--node-x:${nodePoints[index].x}%" aria-label="Go to step ${index+1}: ${esc(step.title)}">${String(index+1).padStart(2,'0')}</button>`).join('')}
+            </nav>
+          </div>
+          <div class="journey-map-caption">Scroll to swim through each step</div>
+          <div class="journey-live" id="journeyAnnouncement" aria-live="polite" aria-atomic="true"></div>
+        </div>
+      </aside>
+      <div class="journey-stages">
+        ${steps.map((step,index)=>`
+          <article class="journey-stop ${index===0?'is-active':'is-upcoming'}" id="${esc(step.id)}" data-journey-step="${index}" tabindex="0" aria-labelledby="${esc(step.id)}Title">
+            <div class="journey-card">
+              <div class="journey-kicker">${String(index+1).padStart(2,'0')}</div>
+              <h3 id="${esc(step.id)}Title">${esc(step.title)}</h3>
+              <p>${esc(step.copy)}</p><div class="journey-feature" aria-hidden="${index===0?'false':'true'}">${step.content}</div>
+            </div>
+          </article>`).join('')}
+      </div>
+    </div>`;
+  section.querySelectorAll('[data-journey-index]').forEach(button=>{
+    button.addEventListener('click',()=>onStepChange(Number(button.dataset.journeyIndex)));
+  });
+  return section;
+}
+const journeySteps = [
+  {id:'builderStop',label:'START',title:'Find internships you can actually land.',copy:'GapFinder reads live listings with TinyFish web agents, shows what you match and what is missing, then turns the gaps into a plan.',content:`
+    <div class="journey-builder pp">
+      <div class="pp-name">
+        <div><label for="journeyFirst">First name <span>(optional)</span></label><input class="fld" id="journeyFirst" autocomplete="given-name"></div>
+        <div><label for="journeyLast">Last name <span>(optional)</span></label><input class="fld" id="journeyLast" autocomplete="family-name"></div>
+      </div>
+      <div class="pp-row">
+        <div class="seg" role="group" aria-label="Career level">
+          <button type="button" data-level="fresher" class="on">Fresher internships</button>
+          <button type="button" data-level="graduate">Graduate jobs <small>beta</small></button>
+        </div>
+      </div>
+      <div class="pp-row">
+        <button class="journey-cta" id="journeyUpload" type="button">Upload resume</button>
+        <a href="#" id="journeyPaste" class="pp-link">or paste text</a>
+        <span class="meta" id="journeyResumeName" style="margin:0"></span>
+      </div>
+      <label for="journeySkillInput">Your skills</label>
+      <div class="journey-skill-row"><input id="journeySkillInput" type="text" placeholder="Add a skill, e.g. Python or CAD" aria-label="Add a skill to your profile"><button class="journey-cta-secondary" id="journeyAddSkill" type="button">Add skill</button></div>
+      <div class="journey-skills" id="journeySkills" aria-live="polite"></div><div class="journey-skill-empty" id="journeyFeedback" aria-live="polite"></div>
+      <div class="pp-row pp-go">
+        <button class="journey-cta" id="journeyContinue" type="button">Find my matches <span aria-hidden="true">→</span></button>
+        <button class="pp-link" id="heroSampleResume" type="button">Use a sample profile</button>
+      </div>
+    </div>`},
+  {id:'internshipStop',label:'THE SEARCH',title:'Search the waters',copy:'GapFinder uses TinyFish on the server to scan live internship listings. Here is a small preview; explore the full search to see more.',content:`
+    <div class="journey-listings" id="journeyListings" aria-label="Internship listing preview"><div class="journey-skeleton"></div><div class="journey-skeleton"></div><div class="journey-skeleton"></div></div>
+    <div class="journey-listing-source" id="journeyListingSource" aria-live="polite">Loading a few listings…</div>
+    <button class="journey-cta" id="journeySearch" type="button">Explore internships</button>`},
+  {id:'matchStop',label:'FIND YOUR FIT',title:'Match with your next role',copy:'Listings are ranked with a skill-match percentage. Open any role to see skills that fit, missing requirements, and details such as deadlines when the listing provides them.',content:`
+    <div class="journey-mini"><span class="journey-score" id="journeyMatchScore">0%</span><div class="journey-mini-copy"><strong>Skill-match score</strong><span>Calculated from your profile and each listing’s requirements</span></div></div>
+    <button class="journey-cta" id="journeyMatchSearch" type="button">See my matches</button>`},
+  {id:'practiceStop',label:'BUILD YOUR EDGE',title:'Close the gap',copy:'Turn missing skills into a practice plan, or build experience by taking on company hackathons, case competitions, and real-world problem challenges.',content:`
+    <div class="journey-mini"><span class="journey-pastel sage">↗</span><div class="journey-mini-copy"><strong>Practice skills or solve a real challenge</strong><span>Use role-based learning resources, stretch picks, and company challenges to build your edge.</span></div></div>
+    <div class="journey-stage-cta"><button class="journey-cta" id="journeyPractice" type="button">Open practice plan</button><button class="journey-cta-secondary" id="journeyRoadmap" type="button">Roadmap</button><button class="journey-cta-secondary" id="journeyChallenges" type="button">Company challenges &amp; hackathons</button></div>`},
+  {id:'applyStop',label:'MAKE YOUR MOVE',title:'Apply with confidence',copy:'Open the original listing, check its deadline and requirements, then use GapFinder’s resume customizer to highlight experience you already have. GapFinder does not track submitted applications or send reminders yet.',content:`
+    <div class="journey-honest-note">Your tailored resume is an editable draft. GapFinder never adds skills you have not claimed.</div>
+    <button class="journey-cta" id="journeyApply" type="button">Browse listings to apply</button>`},
+  {id:'landStop',label:'A NEW BEGINNING',title:'Land it — and celebrate',copy:'When you get the offer, take a moment to enjoy it. Then come back to build your next project, skill, or career move.',content:`
+    <div class="journey-mini journey-celebrate" id="journeyCelebrateCard"><span class="journey-pastel peach">✦</span><div class="journey-mini-copy"><strong>Every step counts.</strong><span>Here’s to what you build next.</span></div></div>
+    <button class="journey-cta" id="journeyCelebrate" type="button">Celebrate a little</button><div class="journey-live" id="journeyCelebrateMessage" aria-live="polite"></div>`}
+];
+let journeyListings = [];
+const journeyPathData = 'M130 56 C230 100 245 154 190 194 C130 235 74 288 130 333 C187 378 115 431 70 472 C20 513 80 570 130 611 C180 652 240 704 190 750';
+const journeyMobilePathData = 'M130 56 C130 100 130 150 130 194 C130 238 130 289 130 333 C130 377 130 428 130 472 C130 516 130 567 130 611 C130 655 130 706 130 750';
+const journeyRoot = JourneyMap({steps:journeySteps,pathData:journeyPathData,onStepChange:index=>{
+  const stop=journeySteps[index];
+  if(stop) scrollToJourney(stop.id,index===0);
+}});
+$('journeyMount').replaceWith(journeyRoot);
+const MAXP = 3;
+const views = ['home','internships','stretch','practice','roadmap','challenges'];
+const curView = () => { const h = (location.hash || '#home').slice(1); return views.includes(h) ? h : 'home'; };
+const chips = $('chips'), input = $('skillInput'), demoBox = $('demo');
+ 
+let CFG = {aliases:{}, implies:{}};
+const skills = [];
+const RESUME = {text:'', name:'', skills:[]};
+const MANUAL = {on:false};
+const REG = new Map();
+let CH = [];
+let TOKEN = 0;
+function newState(){ TOKEN++; return {token:TOKEN, started:false, pages:{}, loading:{}, errors:{}, cur:1, last:null, demo:false, endNote:''}; }
+let S = newState();
+ 
+fetch('/api/config').then(r=>r.json()).then(c=>{
+  CFG = Object.assign(CFG, c);
+  if(c.demo_only){ demoBox.checked=true; demoBox.disabled=true; $('demoLabel').textContent='Demo mode (live agent off)'; }
+  syncDemo(); refreshAll();
+}).catch(()=>{});
+demoBox.onchange = () => { $('demoLabel').textContent = demoBox.checked ? 'Demo mode' : 'Live agent'; syncDemo(); };
+function syncDemo(){ document.querySelectorAll('.demo-banner').forEach(b => b.hidden = !demoBox.checked); }
+syncDemo();
+ 
+/* ---------- chrome: side navigation appears only once there is a resume ---------- */
+const railOn = () => !!RESUME.text || skills.length > 0 || MANUAL.on;
+function syncChrome(){
+  document.body.classList.toggle('has-rail', railOn());
+}
+ 
+/* ---------- side navigation tooltips + shortcuts ---------- */
+document.querySelectorAll('.nav-item').forEach(a => {
+  const label = a.dataset.label, key = a.dataset.key;
+  const i = label.toLowerCase().indexOf(key.toLowerCase());
+  const html = i < 0 ? esc(label) : esc(label.slice(0,i)) + '<u>' + esc(label[i]) + '</u>' + esc(label.slice(i+1));
+  a.insertAdjacentHTML('beforeend', `<span class="tip">${html}<kbd>${esc(key)}</kbd></span>`);
+});
+addEventListener('keydown', e => {
+  const open = [...document.querySelectorAll('.modal')].filter(m => m.style.display === 'flex');
+  if(open.length){ if(e.key === 'Escape') open.forEach(m => m.style.display = 'none'); return; }
+  if(e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  if(t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+  const map = {h:'home', i:'internships', s:'stretch', p:'practice', r:'roadmap', c:'challenges'};
+  const v = map[e.key.toLowerCase()];
+  if(v) location.hash = v;
+});
+ 
+/* ---------- Skill Pop (loading game) ---------- */
+const GAMES = new Map();
+let BEST = 0;
+function startGame(id){
+  if(GAMES.has(id)) return;
+  const arena = $(id); if(!arena) return;
+  const field = arena.querySelector('.gfield'), scoreEl = arena.querySelector('.gscore'), bestEl = arena.querySelector('.gbest');
+  const st = {score:0, timer:null};
+  field.innerHTML = ''; scoreEl.textContent = '0'; bestEl.textContent = BEST;
+  const pool = () => skills.length ? skills : ['python','sql','react','git'];
+  function spawn(){
+    if(document.hidden || field.children.length > 14) return;
+    const bug = Math.random() < 0.22;
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'bub ' + (bug ? 'bug' : 'ok');
+    const p = pool();
+    el.innerHTML = '<span>' + esc(bug ? 'bug' : p[Math.floor(Math.random() * p.length)]) + '</span>';
+    const w = field.clientWidth || 600;
+    el.style.left = Math.max(0, Math.random() * (w - 120)) + 'px';
+    el.style.animationDuration = (5 + Math.random() * 4) + 's';
+    el.onclick = () => {
+      if(el.classList.contains('gone')) return;
+      el.classList.add('gone');
+      if(bug){ st.score = Math.max(0, st.score - 1); field.classList.remove('shake'); void field.offsetWidth; field.classList.add('shake'); }
+      else st.score++;
+      scoreEl.textContent = st.score;
+      if(st.score > BEST) BEST = st.score;
+      bestEl.textContent = BEST;
+    };
+    el.addEventListener('animationend', e => { if(e.animationName === 'rise') el.remove(); });
+    field.appendChild(el);
+  }
+  spawn(); setTimeout(spawn, 300); setTimeout(spawn, 600);
+  st.timer = setInterval(spawn, 750);
+  GAMES.set(id, st);
+}
+function stopGame(id){
+  const st = GAMES.get(id); if(!st) return;
+  clearInterval(st.timer); GAMES.delete(id);
+  const arena = $(id); if(arena) arena.querySelector('.gfield').innerHTML = '';
+}
+ 
+/* ---------- skills ---------- */
+function drawChips(){
+  chips.querySelectorAll('.chip').forEach(c => c.remove());
+  skills.forEach((s,i) => { const el=document.createElement('button'); el.type='button'; el.className='chip'; el.textContent=s; el.setAttribute('aria-label','Remove skill '+s);
+    el.onclick = () => { skills.splice(i,1); drawChips(); refreshAll(); }; chips.insertBefore(el, input); });
+  syncChrome();
+  renderJourneySkills();
+  updateJourneyMatchScore();
+}
+function addSkill(v){ v=v.trim().toLowerCase(); if(v && !skills.includes(v)){ skills.push(v); drawChips(); return true; } return false; }
+function renderJourneySkills(){
+  const box = $('journeySkills');
+  if(!box) return;
+  box.replaceChildren();
+  if(!skills.length){
+    const empty = document.createElement('span');
+    empty.className = 'journey-skill-empty';
+    empty.textContent = 'Your skills will appear here as you add them.';
+    box.appendChild(empty);
+    return;
+  }
+  skills.forEach((skill,index) => {
+    const tag = document.createElement('span');
+    tag.className = 'journey-skill';
+    tag.append(document.createTextNode(skill));
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.setAttribute('aria-label', 'Remove ' + skill);
+    remove.textContent = '×';
+    remove.onclick = () => {
+      skills.splice(index,1);
+      drawChips();
+      refreshAll();
+    };
+    tag.appendChild(remove);
+    box.appendChild(tag);
+  });
+}
+input.addEventListener('keydown', e => {
+  if(e.key==='Enter'||e.key===','){ e.preventDefault(); if(addSkill(input.value)) refreshAll(); input.value=''; }
+  if(e.key==='Backspace' && !input.value && skills.length){ skills.pop(); drawChips(); refreshAll(); }
+});
+ 
+/* ---------- scoring (runs in the browser) ---------- */
+const SOFTW = ['english','communication','proficiency','teamwork','leadership','problem solving','time management'];
+const isSoft = s => SOFTW.some(w => s.includes(w));
+function norm(s){ s = String(s).toLowerCase().replace(/\(.*?\)/g,'').trim(); return (CFG.aliases||{})[s] || s; }
+function haveSet(){
+  const set = new Set();
+  skills.forEach(s => { const c = norm(s); set.add(c); ((CFG.implies||{})[c]||[]).forEach(x => set.add(x)); });
+  return set;
+}
+function mentions(text, s){
+  const e2 = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('(?<![a-z0-9+#])' + e2 + '(?![a-z0-9+#])').test(text);
+}
+function scoreItem(it){
+  const have = haveSet();
+  const req = [...new Set((it.skills||[]).map(norm))].filter(Boolean);
+  const techReq = req.filter(r => !isSoft(r));
+  const text = ((it.title||'') + ' ' + (it.summary||'')).toLowerCase();
+  const mentioned = [...new Set(skills.map(norm))].filter(s => mentions(text, s));
+  const hit = req.filter(r => have.has(r));
+  const miss = req.filter(r => !have.has(r));
+  const techHit = techReq.filter(r => have.has(r));
+  const mention = Math.min(1, mentioned.length / 3);
+  const p = techReq.length ? 0.8 * (techHit.length / techReq.length) + 0.2 * mention : mention;
+  return {...it, stipend: it.stipend ?? it.reward ?? '', pct: Math.round(100*p),
+    used: [...new Set([...hit, ...mentioned])],
+    tech_gaps: miss.filter(m => !isSoft(m)), soft_gaps: miss.filter(isSoft)};
+}
+function updateJourneyMatchScore(){
+  const score=$('journeyMatchScore');
+  if(!score||!journeyListings.length) return;
+  score.textContent=`${scoreItem(journeyListings[0]).pct}%`;
+}
+const keyOf = it => (it.apply_url || ((it.title||'') + '|' + (it.company||''))).toLowerCase();
+const allLoaded = () => Object.values(S.pages).flat().map(scoreItem);
+ 
+/* ---------- cards ---------- */
+function card(it, extra='', mode='internships'){
+  const k = keyOf(it); REG.set(k, it);
+  const pct = it.pct, color = pct>=60?'var(--ok)':pct>=30?'var(--warn)':'var(--bad)';
+  const used = (it.used||[]).map(s=>`<span class="tag have">${esc(s)}</span>`).join('') || '<span class="meta">None yet</span>';
+  const gaps = (it.tech_gaps||[]).map(s=>`<a class="tag gap" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${q('learn '+s+' for beginners')}">${esc(s)} ↗</a>`).join('') || '<span class="meta">No technical gaps found</span>';
+  const soft = (it.soft_gaps||[]).map(s=>`<span class="tag soft">${esc(s)}</span>`).join('');
+  const link = /^https:\/\//.test(it.apply_url||'') ? `<a class="apply" target="_blank" rel="noopener" href="${esc(it.apply_url)}">${mode==='challenges'?'View challenge →':'View listing →'}</a>` : '';
+  const details = mode==='challenges'
+    ? `${esc(it.company||'Organizer not listed')} · ${it.reward?`Reward ${esc(it.reward)} · `:''}Deadline ${esc(it.deadline||'not shown')}`
+    : `${esc(it.company)} · ${esc(it.stipend)} · Deadline ${esc(it.deadline||'not shown')}`;
+  return `<div class="card"><div class="top2"><div><div class="title">${esc(it.title)}</div>
+    <div class="meta">${details}</div></div>
+    <div class="ring" style="--p:${pct};--c:${color}"><b>${pct}<small>%</small></b></div></div>
+    ${it.summary?`<p class="sum">${esc(it.summary)}</p>`:''}${extra}
+    <div class="sec"><b>Your skills that fit</b>${used}</div><div class="sec"><b>Learn next</b>${gaps}</div>
+    ${soft?`<div class="sec"><b>Also wanted</b>${soft}</div>`:''}
+    <div class="actions">${link}${mode==='challenges'?'':`<button class="ghost cust" type="button" data-k="${esc(k)}">Customize resume</button>`}</div></div>`;
+}
+ 
+/* ---------- fetching ---------- */
+async function fetchBatch(page, mode){
+  const res = await fetch('/api/search', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({mode, source: $('source').value, demo: demoBox.checked, page, level: LEVEL})});
+  if(!res.ok) throw new Error('Server error ' + res.status);
+  const reader = res.body.getReader(), dec = new TextDecoder(); let buf='', out=null, err=null;
+  while(true){
+    const {value, done} = await reader.read(); if(done) break;
+    buf += dec.decode(value, {stream:true});
+    const parts = buf.split('\n\n'); buf = parts.pop();
+    for(const p of parts){
+      if(!p.startsWith('data:')) continue;
+      let ev; try{ ev = JSON.parse(p.slice(5)); }catch{ continue; }
+      if(ev.type==='error') err = ev.text;
+      else if(ev.type==='result') out = ev;
+    }
+  }
+  if(err) throw new Error(err);
+  if(!out) throw new Error('The agent returned nothing.');
+  return out;
+}
+ 
+/* ---------- internships: pages ---------- */
+async function startSearch(){
+  addSkill(input.value); input.value=''; drawChips();
+  if(!skills.length){ alert('Add your skills or upload your resume first.'); return; }
+  S = newState(); S.started = true;
+  $('res1').innerHTML=''; $('note1').innerHTML=''; $('pager').innerHTML='';
+  $('go1').disabled = true;
+  await loadPage(1, S.token);
+  $('go1').disabled = false;
+}
+ 
+async function loadPage(p, tok){
+  if(tok !== S.token || p > MAXP) return;
+  if(S.pages[p] || S.loading[p]) return;
+  if(S.last && p > S.last) return;
+  S.loading[p] = true; delete S.errors[p];
+  render();
+  try{
+    const ev = await fetchBatch(p, 'internships');
+    if(tok !== S.token) return;
+    S.demo = ev.demo;
+    const others = new Set();
+    Object.values(S.pages).forEach(arr => arr.forEach(i => others.add(keyOf(i))));
+    const fresh = (ev.items||[]).filter(i => !others.has(keyOf(i)));
+    if(fresh.length){
+      S.pages[p] = fresh;
+      if(ev.demo) S.last = 1;
+    }else if(p === 1){
+      S.pages[1] = []; S.last = 1; S.endNote = 'Nothing came back for this search.';
+    }else{
+      S.last = p - 1;
+      S.endNote = 'No further pages were found for this search.';
+      if(S.cur >= p) S.cur = S.last;
+    }
+  }catch(e){
+    if(tok !== S.token) return;
+    S.errors[p] = e.message;
+  }
+  delete S.loading[p];
+  render();
+  prefetch(tok);
+}
+ 
+function prefetch(tok){
+  if(tok !== S.token || S.demo) return;
+  if(Object.keys(S.loading).length) return;
+  if(!S.pages[S.cur]) return;
+  const n = S.cur + 1;
+  if(n > MAXP || (S.last && n > S.last)) return;
+  if(S.pages[n] || S.errors[n]) return;
+  loadPage(n, tok);
+}
+ 
+function goTo(p){
+  if(!S.started || p < 1 || p > MAXP || (S.last && p > S.last)) return;
+  S.cur = p;
+  if(!S.pages[p]) loadPage(p, S.token);
+  render();
+  $('listTop').scrollIntoView({behavior:'smooth'});
+  prefetch(S.token);
+}
+ 
+function updateBadge(){
+  const n = allLoaded().filter(i => i.pct < 60 && i.tech_gaps.length > 0).length;
+  const b = $('badgeStretch');
+  b.textContent = n > 9 ? '9+' : n;
+  b.style.display = n ? 'flex' : 'none';
+}
+function render(){ drawList(); drawPager(); updateBadge(); }
+ 
+function setLoading(on, title){
+  $('load1').style.display = on ? 'block' : 'none';
+  if(title) $('loadTitle').textContent = title;
+  if(on) startGame('arena1'); else stopGame('arena1');
+}
+ 
+function drawList(){
+  if(!S.started) return;
+  const p = S.cur, items = S.pages[p];
+  if(!items){
+    $('res1').innerHTML = '';
+    if(S.errors[p]){
+      setLoading(false);
+      $('note1').innerHTML = `<p class="err">${esc(S.errors[p])}</p><button class="ghost" id="retryBtn" type="button" data-p="${p}">Try again</button>`;
+    }else if(S.loading[p]){
+      setLoading(true, p === 1 ? 'Finding internships for you' : `Loading page ${p}`);
+      $('note1').innerHTML = '';
+    }else{
+      setLoading(false);
+      $('note1').innerHTML = S.endNote ? `<p class="note">${esc(S.endNote)}</p>` : '';
+    }
+    return;
+  }
+  setLoading(false);
+  const minp = +$('minpct').value;
+  const all = items.map(scoreItem).sort((a,b) => b.pct - a.pct);
+  const vis = all.filter(i => i.pct >= minp);
+  const hidden = all.length - vis.length;
+  $('res1').innerHTML = vis.map(i => card(i)).join('') ||
+    `<p class="empty">${all.length ? 'Every listing on this page is below the minimum match.' : 'Nothing came back for this search.'}</p>`;
+  let n = '';
+  if(hidden) n += `${hidden} hidden below ${minp}% (<a href="#" id="showAll" style="color:var(--info)">show all</a>)`;
+  if(S.demo) n += (n ? ' · ' : '') + 'Showing saved demo data';
+  $('note1').innerHTML = (n ? `<p class="note">${n}</p>` : '') +
+    (S.endNote && S.last === p ? `<p class="note">${esc(S.endNote)}</p>` : '');
+}
+ 
+function drawPager(){
+  const box = $('pager');
+  const maxP = Math.min(MAXP, S.last || MAXP);
+  if(!S.started || !S.pages[1] || maxP <= 1){ box.innerHTML = ''; return; }
+  const cur = S.cur;
+  let h = `<button class="pbtn" type="button" data-p="${cur-1}" ${cur <= 1 ? 'disabled' : ''}>← Previous</button>`;
+  for(let i = 1; i <= maxP; i++){
+    h += `<button class="pbtn ${i===cur?'on':''}" type="button" data-p="${i}">${i}</button>`;
+  }
+  h += `<button class="pbtn" type="button" data-p="${cur+1}" ${cur >= maxP ? 'disabled' : ''}>Next →</button>`;
+  box.innerHTML = h;
+}
+ 
+document.addEventListener('click', e => {
+  const pb = e.target.closest('.pbtn'); if(pb && !pb.disabled){ goTo(+pb.dataset.p); return; }
+  const rb = e.target.closest('#retryBtn'); if(rb){ loadPage(+rb.dataset.p, S.token); return; }
+  const sa = e.target.closest('#showAll'); if(sa){ e.preventDefault(); $('minpct').value = '0'; render(); return; }
+  const cb = e.target.closest('.cust'); if(cb){ openTailor(cb.dataset.k); return; }
+  const lb = e.target.closest('[data-learned]'); if(lb){ markLearned(lb.dataset.learned); return; }
+  const ub = e.target.closest('[data-unlearn]'); if(ub){ unlearn(ub.dataset.unlearn); }
+});
+ 
+/* ---------- challenges ---------- */
+async function runChallenges(){
+  addSkill(input.value); input.value=''; drawChips();
+  if(!skills.length){ alert('Add your skills or upload your resume first.'); return; }
+  $('go2').disabled=true; $('res2').innerHTML=''; $('note2').innerHTML='';
+  $('load2').style.display='block'; startGame('arena2');
+  try{
+    const ev = await fetchBatch(1, 'challenges');
+    CH = ev.items || [];
+    drawChallenges();
+    if(ev.demo) $('note2').innerHTML = '<p class="note">Demo only: these are illustrative examples, not current company opportunities.</p>';
+    else if(!CH.length) $('note2').innerHTML = '<p class="note">Nothing came back for this search.</p>';
+  }catch(e){ $('note2').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  $('load2').style.display='none'; stopGame('arena2'); $('go2').disabled=false;
+}
+function drawChallenges(){
+  if(!CH.length) return;
+  $('res2').innerHTML = CH.map(scoreItem).sort((a,b)=>b.pct-a.pct).map(i => card(i,'','challenges')).join('');
+}
+ 
+/* ---------- stretch + practice ---------- */
+function drawStretch(){
+  const out = $('stretchOut');
+  const items = allLoaded();
+  if(!items.length){ out.innerHTML='<p class="empty">Run a search on the Internships page first, then come back here.</p>'; return; }
+  const near = items.filter(i => i.pct < 60 && i.tech_gaps.length > 0)
+    .sort((a,b) => (a.tech_gaps.length - b.tech_gaps.length) || (b.pct - a.pct));
+  out.innerHTML = near.map(i => card(i, `<div class="close">You're ${i.tech_gaps.length} skill${i.tech_gaps.length>1?'s':''} away: learn <b>${esc(i.tech_gaps.join(', '))}</b> to qualify.</div>`)).join('')
+    || '<p class="empty">Nothing in the stretch range right now.</p>';
+}
+function drawPractice(){
+  const out = $('practiceOut');
+  const gapCount = {};
+  allLoaded().forEach(i => (i.tech_gaps||[]).forEach(g => gapCount[g] = (gapCount[g]||0) + 1));
+  const gaps = Object.keys(gapCount).sort((a,b) => gapCount[b] - gapCount[a]);
+  const tile = (s,label,count) => `<div class="tile"><h3>${esc(s)}</h3><p>${label}${count?` · asked for in ${count} listing${count>1?'s':''}`:''}</p>
+    <div class="links" style="margin-top:10px"><a target="_blank" rel="noopener" href="https://leetcode.com/problemset/?search=${q(s)}">Problems</a>
+    <a target="_blank" rel="noopener" href="https://www.google.com/search?q=${q(s+' practice problems for beginners')}">Exercises</a>
+    <a target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${q('learn '+s+' for beginners')}">Videos</a></div></div>`;
+  let h = '';
+  if(gaps.length) h += '<h3>Close these gaps first</h3><div class="grid">' + gaps.map(g => tile(g,'Gap',gapCount[g])).join('') + '</div>';
+  if(skills.length) h += '<h3>Keep these sharp</h3><div class="grid">' + skills.map(s => tile(s,'You know this')).join('') + '</div>';
+  out.innerHTML = h || '<p class="empty">Add your skills or resume above, and run a search on the Internships page to get gap-based practice.</p>';
+}
+ 
+/* ---------- resume ---------- */
+let GO_AFTER = false, PASTE_GO = false;
+function showResumeState(){
+  const has = !!RESUME.text;
+  $('resumeSlot').style.display = has ? 'none' : 'flex';
+  $('resumePill').style.display = has ? 'flex' : 'none';
+  if(has) $('rName').textContent = RESUME.name || 'Resume';
+  syncChrome();
+}
+function resumeMsg(text, isErr){
+  const note = $('resumeNote');
+  note.className = isErr ? 'err' : 'meta';
+  note.textContent = text;
+  if(isErr && curView() === 'home') alert(text);
+}
+async function readResume(file, text, goNext){
+  const fd = new FormData();
+  if(file) fd.append('file', file);
+  fd.append('text', text || '');
+  resumeMsg('Reading your resume...', false);
+  try{
+    const res = await fetch('/api/resume', {method:'POST', body: fd});
+    const data = await res.json();
+    if(!res.ok){ resumeMsg(data.error || 'Something went wrong.', true); return false; }
+    RESUME.skills.forEach(s => { const i = skills.indexOf(s); if(i > -1) skills.splice(i,1); });
+    RESUME.text = data.text; RESUME.name = file ? file.name : 'Pasted text'; RESUME.skills = [];
+    data.skills.forEach(s => { if(addSkill(s)) RESUME.skills.push(s); });
+    $('rMeta').textContent = `${data.skills.length} skills found`;
+    resumeMsg('Only the skills below are used. Click one to remove it, or type to add more.', false);
+    $('resumeText').value = '';
+    drawChips(); showResumeState(); refreshAll();
+    if(goNext) location.hash = 'internships';
+    return true;
+  }catch(e){ resumeMsg(e.message, true); return false; }
+}
+$('resumeFile').onchange = e => {
+  const f = e.target.files[0], go = GO_AFTER; GO_AFTER = false;
+  if(f) readResume(f, '', go);
+  e.target.value = '';
+};
+$('upBtn').onclick = () => { GO_AFTER = false; $('resumeFile').click(); };
+$('rReplace').onclick = () => { GO_AFTER = false; $('resumeFile').click(); };
+$('rRemove').onclick = () => {
+  RESUME.skills.forEach(s => { const i = skills.indexOf(s); if(i > -1) skills.splice(i,1); });
+  RESUME.text = ''; RESUME.name = ''; RESUME.skills = [];
+  $('resumeNote').textContent = '';
+  drawChips(); showResumeState(); refreshAll();
+};
+$('rView').onclick = () => {
+  $('vTitle').textContent = RESUME.name || 'Resume';
+  $('vText').textContent = RESUME.text;
+  $('viewModal').style.display = 'flex';
+};
+$('vClose').onclick = () => { $('viewModal').style.display = 'none'; };
+$('viewModal').onclick = e => { if(e.target === $('viewModal')) $('viewModal').style.display = 'none'; };
+ 
+function openPaste(go){ PASTE_GO = go; $('pasteModal').style.display = 'flex'; $('resumeText').focus(); }
+$('pasteOpen').onclick = e => { e.preventDefault(); openPaste(false); };
+$('heroSampleResume').onclick = () => {
+  const sampleSkills=['python','javascript','react','sql','git','html','css'];
+  RESUME.skills.forEach(skill=>{
+    const index=skills.indexOf(skill);
+    if(index>-1) skills.splice(index,1);
+  });
+  RESUME.text=`ALEX MORGAN
+Computer Science Student
+alex.morgan@example.test
+ 
+PROFILE
+Computer science student building practical web applications and data-driven tools. Interested in software engineering internships.
+ 
+PROJECTS
+Campus Events Dashboard
+- Built a responsive event dashboard using React, JavaScript, HTML, and CSS.
+- Added SQL-backed filtering and Git-based team collaboration.
+ 
+Data Explorer
+- Wrote Python scripts to clean and summarize sample datasets.
+- Documented setup steps and project decisions for other contributors.
+ 
+SKILLS
+Python, JavaScript, React, SQL, Git, HTML, CSS
+ 
+EDUCATION
+B.S. Computer Science — Example University (expected 2027)
+ 
+Example resume only. All names, contact details, school, and project details are fictional.`;
+  RESUME.name='Sample resume (example)';
+  RESUME.skills=[];
+  sampleSkills.forEach(skill=>{if(addSkill(skill)) RESUME.skills.push(skill);});
+  $('rMeta').textContent='Example · no file uploaded';
+  $('resumeNote').className='meta';
+  $('resumeNote').textContent='Example resume loaded locally. It was not uploaded or sent to the server.';
+  MANUAL.on=true;
+  drawChips();
+  showResumeState();
+  refreshAll();
+  scrollToJourney('builderStop',false);
+};
+$('journeyUpload').onclick = () => { GO_AFTER = false; $('resumeFile').click(); };
+$('journeyPaste').onclick = e => { e.preventDefault(); openPaste(false); };
+$('journeyAddSkill').onclick = addJourneySkill;
+$('journeySkillInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter' || e.key === ','){ e.preventDefault(); addJourneySkill(); }
+});
+function addJourneySkill(){
+  const field = $('journeySkillInput');
+  if(addSkill(field.value)){ field.value = ''; $('journeyFeedback').textContent = ''; refreshAll(); }
+  else if(field.value.trim()) $('journeyFeedback').textContent = 'That skill is already in your profile.';
+}
+function scrollToJourney(target, focusBuilder){
+  const section = $(target);
+  section.scrollIntoView({behavior:'smooth',block:'center'});
+  updateJourneyPosition();
+  if(focusBuilder) setTimeout(() => $('journeySkillInput').focus({preventScroll:true}), 350);
+}
+function updateJourneyPath(){
+  const mobile=matchMedia('(max-width:700px)').matches;
+  const map=$('journeyMapCanvas');
+  if(!map) return;
+  map.querySelectorAll('.journey-track path').forEach(path=>path.setAttribute('d',mobile?journeyMobilePathData:journeyPathData));
+}
+document.querySelectorAll('.journey-stop').forEach((stop,index)=>{
+  stop.addEventListener('keydown',e=>{
+    if(e.target!==stop || (e.key!=='Enter'&&e.key!==' ')) return;
+    e.preventDefault();
+    scrollToJourney(stop.id,index===0);
+  });
+});
+let journeyFrame=0,journeyIdleTimer=0,journeyAngle=0,journeyActive=-1,journeyLastProgress=0,journeyLastTime=0;
+function updateJourneyPosition(){
+  const map=$('journeyMapCanvas'),path=map?.querySelector('.journey-progress'),fish=$('journeyFish');
+  if(!map||!path||!fish||curView()!=='home') return;
+  const mobile=matchMedia('(max-width:700px)').matches;
+  const bounds=map.getBoundingClientRect(),length=path.getTotalLength();
+  if(!bounds.width||!bounds.height||!length) return;
+  const stops=[...document.querySelectorAll('.journey-stop')];
+  const centers=stops.map(stop=>{const box=stop.getBoundingClientRect();return box.top+box.height/2;});
+  const target=innerHeight*.52;
+  const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let active=0,nearest=Infinity,progress=0;
+  centers.forEach((center,index)=>{const distance=Math.abs(center-target);if(distance<nearest){nearest=distance;active=index;}});
+  if(target>=centers[centers.length-1]) progress=1;
+  else if(target>centers[0]){
+    for(let i=0;i<centers.length-1;i++){
+      if(target<=centers[i+1]){
+        const ratio=clamp((target-centers[i])/Math.max(1,centers[i+1]-centers[i]),0,1);
+        progress=(i+ratio)/(centers.length-1);
+        break;
+      }
+    }
+  }
+  const point=path.getPointAtLength(length*progress),ahead=path.getPointAtLength(Math.min(length,length*progress+Math.max(1,length*.004)));
+  const viewHeight=reduceMotion?800:300;
+  const viewTop=reduceMotion?0:clamp(point.y-viewHeight*.52,0,800-viewHeight);
+  map.querySelector('.journey-track').setAttribute('viewBox',`0 ${viewTop} 260 ${viewHeight}`);
+  const nodes=[...map.querySelectorAll('.journey-map-nodes button')];
+  nodes.forEach((button,index)=>{
+    const nodeY=Number(button.dataset.nodeY),visible=reduceMotion||index===active||index===active+1;
+    button.style.setProperty('--node-x',mobile?'50%':`${Number(button.dataset.nodeX)/260*100}%`);
+    button.style.setProperty('--node-y',`${(nodeY-viewTop)/viewHeight*100}%`);
+    button.style.opacity=visible?'1':'0';
+    button.style.pointerEvents=visible?'auto':'none';
+    button.tabIndex=visible?0:-1;
+  });
+  const rawAngle=Math.atan2(ahead.y-point.y,ahead.x-point.x)*180/Math.PI;
+  const angleDelta=((rawAngle-journeyAngle+540)%360)-180;
+  const nextAngle=journeyAngle+angleDelta*.2;
+  const x=(mobile?130:point.x)*bounds.width/260,y=(point.y-viewTop)*bounds.height/viewHeight;
+  const fishSize=fish.getBoundingClientRect();
+  const now=performance.now(),velocity=Math.abs(progress-journeyLastProgress)/Math.max(16,now-journeyLastTime);
+  path.style.strokeDasharray=String(length);
+  path.style.strokeDashoffset=String(length*(1-progress));
+  journeyAngle=nextAngle;
+  fish.style.transform=`translate3d(${x-fishSize.width/2}px,${y-fishSize.height/2}px,0) rotate(${journeyAngle}deg)`;
+  fish.style.setProperty('--tail-speed',`${Math.max(.09,Math.min(.4,.36-velocity*12))}s`);
+  clearTimeout(journeyIdleTimer);
+  journeyIdleTimer=setTimeout(()=>fish.style.setProperty('--tail-speed','.38s'),140);
+  journeyLastProgress=progress;journeyLastTime=now;
+  stops.forEach((stop,index)=>{
+    stop.classList.toggle('is-active',index===active);
+    stop.classList.toggle('is-passed',index<active);
+    stop.classList.toggle('is-upcoming',index>active);
+    stop.querySelector('.journey-feature').setAttribute('aria-hidden',String(!reduceMotion&&index!==active));
+  });
+  const tracker=nodes;
+  tracker.forEach((button,index)=>{
+    button.classList.toggle('is-active',index===active);
+    button.classList.toggle('is-passed',index<active);
+    if(index===active) button.setAttribute('aria-current','step'); else button.removeAttribute('aria-current');
+  });
+  $('journeyTrackerLabel').textContent=journeySteps[active].title;
+  if(journeyActive!==active){
+    $('journeyAnnouncement').textContent=`Step ${active+1} of ${stops.length}: ${journeySteps[active].title}`;
+    if(journeyActive>=0) makeJourneySplash(x,y);
+    journeyActive=active;
+  }
+}
+function makeJourneySplash(x,y){
+  const route=$('journeyMapCanvas');
+  for(let i=0;i<5;i++){
+    const drop=document.createElement('i');drop.className='journey-splash';
+    drop.style.left=`${x}px`;drop.style.top=`${y}px`;
+    drop.style.setProperty('--dx',`${Math.round((Math.random()-.5)*58)}px`);
+    drop.style.setProperty('--dy',`${Math.round((Math.random()-.7)*48)}px`);
+    drop.addEventListener('animationend',()=>drop.remove(),{once:true});
+    route.appendChild(drop);
+  }
+}
+addEventListener('scroll', () => {
+  if(journeyFrame) return;
+  journeyFrame = requestAnimationFrame(() => { journeyFrame = 0; updateJourneyPosition(); });
+}, {passive:true});
+addEventListener('resize',()=>{updateJourneyPath();updateJourneyPosition();},{passive:true});
+updateJourneyPath();
+const openInternships=()=>{
+  if(!skills.length){ $('journeyFeedback').textContent = 'Add a skill here first, then continue to internship matches.'; scrollToJourney('builderStop', true); return; }
+  location.hash = 'internships';
+};
+['journeySearch','journeyMatchSearch','journeyApply','journeyContinue'].forEach(id=>$(id).onclick=openInternships);
+$('journeyPractice').onclick = () => {
+  if(!skills.length){ $('journeyFeedback').textContent = 'Add a skill to your profile before opening your practice plan.'; scrollToJourney('builderStop', true); return; }
+  location.hash = S.started ? 'practice' : 'internships';
+};
+$('journeyChallenges').onclick = () => {
+  if(!skills.length){ $('journeyFeedback').textContent='Add a skill to your profile before exploring challenges.';scrollToJourney('builderStop',true);return; }
+  location.hash='challenges';
+};
+function updateThemeToggle(light){
+  const label=light?'Switch to night mode':'Switch to day mode';
+  $('themeToggle').setAttribute('aria-label',label);
+  $('themeToggle').setAttribute('title',label);
+  $('themeToggle').setAttribute('aria-pressed',String(light));
+}
+function setTheme(light,persist){
+  document.body.classList.toggle('theme-light',light);
+  updateThemeToggle(light);
+  if(persist){
+    try{localStorage.setItem('gapfinder-theme',light?'light':'dark');}
+    catch(error){console.warn('Could not save the color theme preference.',error);}
+  }
+}
+let savedTheme=null;
+try{savedTheme=localStorage.getItem('gapfinder-theme');}
+catch(error){console.warn('Could not read the saved color theme preference.',error);}
+setTheme(savedTheme==='light',false);
+$('themeToggle').onclick=()=>setTheme(!document.body.classList.contains('theme-light'),true);
+function fireConfetti(){
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  document.querySelector('canvas.fx')?.remove();
+  const c=document.createElement('canvas'); c.className='fx'; c.setAttribute('aria-hidden','true'); document.body.appendChild(c);
+  const ctx=c.getContext('2d'), dpr=Math.min(devicePixelRatio||1,2); let W,H;
+  const fit=()=>{W=innerWidth;H=innerHeight;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)};
+  fit(); addEventListener('resize',fit);
+  const cs=getComputedStyle(document.body);
+  const cols=['--water-accent','--water-sage','--water-lavender','--water-peach'].map(v=>cs.getPropertyValue(v).trim()||'#ff9a6b');
+  const N=innerWidth<700?70:140, P=[];
+  for(let i=0;i<N;i++){
+    const left=i%2===0, a=Math.PI*(.22+Math.random()*.25), sp=1100+Math.random()*900;
+    P.push({x:left?0:W,y:H,vx:Math.cos(a)*sp*(left?1:-1),vy:-Math.sin(a)*sp,r:Math.random()*6.28,vr:(Math.random()-.5)*12,w:6+Math.random()*6,h:3+Math.random()*4,c:cols[i%cols.length]});
+  }
+  const t0=performance.now(); let last=t0;
+  (function tick(now){
+    const dt=Math.min((now-last)/1000,.05); last=now;
+    ctx.clearRect(0,0,W,H);
+    const fade=Math.max(0,1-(now-t0)/3800); let alive=0;
+    for(const p of P){
+      p.vy+=1000*dt; const d=Math.exp(-2*dt); p.vx*=d; p.vy*=d;
+      p.x+=p.vx*dt; p.y+=p.vy*dt; p.r+=p.vr*dt;
+      if(p.y>H+20) continue;
+      alive++; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.globalAlpha=fade; ctx.fillStyle=p.c; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+    }
+    if(alive&&fade>0) requestAnimationFrame(tick); else { removeEventListener('resize',fit); c.remove(); }
+  })(t0);
+}
+$('journeyCelebrate').onclick=()=>{
+  const card=$('journeyCelebrateCard');
+  card.classList.remove('is-celebrating'); void card.offsetWidth; card.classList.add('is-celebrating');
+  fireConfetti();
+  $('journeyCelebrateMessage').textContent='A little celebration for your milestone. Here’s to what you build next!';
+};
+function renderJourneyListings(items,source){
+  journeyListings=items.filter(item=>item&&typeof item==='object').slice(0,3);
+  const box=$('journeyListings');
+  if(journeyListings.length){
+    box.innerHTML=journeyListings.map(item=>`
+      <div class="journey-listing">
+        <strong title="${esc(item.title||'Internship')}">${esc(item.title||'Internship')}</strong>
+        <span>${esc(item.stipend||'Details on listing')}</span>
+        <small>${esc(item.company||'Company')} · Deadline ${esc(item.deadline||'not shown')}</small>
+      </div>`).join('');
+    $('journeyListingSource').textContent=source==='tinyfish'?'Live preview · TinyFish':'Sample listings · preview only';
+  }else{
+    box.innerHTML='<div class="journey-listing"><strong>No preview listings available</strong><span>Try the full search</span></div>';
+    $('journeyListingSource').textContent='Preview unavailable';
+  }
+  updateJourneyMatchScore();
+}
+async function loadJourneyListings(){
+  const fallback=[
+    {title:'Product Testing - Internship (WFH)',company:'iCelero Technologies',stipend:'₹ 27,000 - 28,000 /month',deadline:"21 Nov' 26",skills:['Python']},
+    {title:'AI Prompt Engineering - Internship (WFH)',company:'InAmigos Foundation',stipend:'Unpaid',deadline:"20 Nov' 26",skills:['English Proficiency (Spoken)','Web development']},
+    {title:'Founder’s Office Intern – Product & Growth',company:'AVS Herbals Private Limited',stipend:'₹ 8,000 - 12,000 /month',deadline:"14 Nov' 26",skills:['Product Development']}
+  ];
+  try{
+    const response=await fetch('/api/listings');
+    if(!response.ok) throw new Error(`Preview request failed (${response.status})`);
+    const data=await response.json();
+    renderJourneyListings(Array.isArray(data.items)?data.items:fallback,data.source);
+  }catch(error){
+    renderJourneyListings(fallback,'sample');
+    $('journeyListingSource').textContent='Sample preview · live listings load from the app server';
+  }
+}
+loadJourneyListings();
+renderJourneySkills();
+updateJourneyPosition();
+$('pasteClose').onclick = () => { $('pasteModal').style.display = 'none'; };
+$('pasteModal').onclick = e => { if(e.target === $('pasteModal')) $('pasteModal').style.display = 'none'; };
+$('pasteUse').onclick = async () => {
+  const ok = await readResume(null, $('resumeText').value, PASTE_GO);
+  if(ok) $('pasteModal').style.display = 'none';
+};
+ 
+/* drop a file anywhere on the front page */
+addEventListener('dragover', e => { if(curView() === 'home') e.preventDefault(); });
+addEventListener('drop', e => {
+  if(curView() !== 'home') return;
+  e.preventDefault();
+  const f = e.dataTransfer && e.dataTransfer.files[0];
+  if(f) readResume(f, '', true);
+});
+ 
+/* ---------- tailor resume ---------- */
+const ACR = ['sql','css','html','aws','gcp','nlp','api','seo','php','ui/ux design','ci/cd'];
+const pretty = s => ACR.includes(s) ? s.toUpperCase() : s.charAt(0).toUpperCase() + s.slice(1);
+ 
+function tailor(it){
+  const direct = new Set(skills.map(norm));
+  const req = [...new Set((it.skills||[]).map(norm))].filter(Boolean);
+  const strong = req.filter(r => direct.has(r));
+  const implied = [];
+  req.forEach(r => {
+    if(direct.has(r)) return;
+    const from = [...direct].find(s => ((CFG.implies||{})[s]||[]).includes(r));
+    if(from) implied.push({skill:r, from});
+  });
+  const impSet = new Set(implied.map(x => x.skill));
+  const missing = req.filter(r => !direct.has(r) && !impSet.has(r));
+  const others = [...direct].filter(s => !req.includes(s));
+  const keys = [...strong, ...implied.map(x => x.skill)];
+  const ordered = [...keys, ...others];
+ 
+  const stop = ['intern','internship','with','work','from','home','the','and','for'];
+  const titleWords = (it.title||'').toLowerCase().split(/[^a-z0-9+#.]+/).filter(w => w.length > 3 && !stop.includes(w));
+  const lines = RESUME.text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 15);
+  const relevant = lines.filter(l => { const low = l.toLowerCase(); return keys.some(k => low.includes(k)) || titleWords.some(w => low.includes(w)); }).slice(0, 8);
+ 
+  const summary = ordered.length
+    ? `Candidate with skills in ${ordered.slice(0,5).map(pretty).join(', ')}, applying for the ${it.title} internship at ${it.company}.`
+    : `Candidate applying for the ${it.title} internship at ${it.company}.`;
+  const text = [
+    ...(nameLine() ? [nameLine(), ''] : []), 'SUMMARY', summary, '',
+    'SKILLS (ordered for this role)', ordered.map(pretty).join(', ') || '(none found)', '',
+    'MOST RELEVANT LINES FROM YOUR RESUME', relevant.length ? relevant.map(l => '- ' + l).join('\n') : '(no lines matched this role)', '',
+    'FULL RESUME', RESUME.text
+  ].join('\n');
+  return {strong, implied, missing, text};
+}
+ 
+let tailored = null;
+function openTailor(k){
+  const it = REG.get(k); if(!it) return;
+  if(!RESUME.text.trim()){ alert('Upload your resume first (on the home page, or in the profile bar above), then try again.'); return; }
+  const t = tailor(it); tailored = it;
+  $('mtitle').textContent = `${it.title} · ${it.company}`;
+  $('mbody').innerHTML =
+    `<div class="sec"><b>Lead with these (already on your resume)</b>${t.strong.map(s=>`<span class="tag have">${esc(pretty(s))}</span>`).join('') || '<span class="meta">No direct overlap</span>'}</div>` +
+    `<div class="sec"><b>You can honestly mention</b>${t.implied.map(x=>`<span class="tag soft">${esc(pretty(x.skill))} <span class="meta">(you list ${esc(x.from)})</span></span>`).join('') || '<span class="meta">Nothing extra</span>'}</div>` +
+    `<div class="sec"><b>Not on your resume</b>${t.missing.map(s=>`<span class="tag miss">${esc(pretty(s))}</span>`).join('') || '<span class="meta">None</span>'}</div>` +
+    `<p class="meta" style="margin-top:10px">Only add something from the last row if you really have it. Otherwise it is what to learn next. This tool reorders and highlights what is already true. It does not invent skills.</p>`;
+  $('mtext').value = t.text; $('mmsg').textContent = '';
+  $('modal').style.display = 'flex';
+}
+$('mclose').onclick = () => { $('modal').style.display = 'none'; };
+$('modal').onclick = e => { if(e.target === $('modal')) $('modal').style.display = 'none'; };
+$('mcopy').onclick = async () => {
+  try{ await navigator.clipboard.writeText($('mtext').value); $('mmsg').textContent = 'Copied.'; }
+  catch{ $('mmsg').textContent = 'Could not copy. Select the text and press Ctrl+C.'; }
+};
+$('mdl').onclick = () => {
+  const blob = new Blob([$('mtext').value], {type:'text/plain'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'resume-' + ((tailored && tailored.company) || 'tailored').replace(/[^a-z0-9]+/gi,'-').toLowerCase() + '.txt';
+  a.click(); URL.revokeObjectURL(a.href);
+};
+ 
+ 
+/* ---------- name (shown in the header and on the tailored resume) ---------- */
+const NAME = {first:'', last:''};
+try{ const n = JSON.parse(localStorage.getItem('gapfinder-name') || '{}'); NAME.first = n.first || ''; NAME.last = n.last || ''; }catch(e){}
+function nameLine(){ return [NAME.first, NAME.last].filter(Boolean).join(' ').toUpperCase(); }
+function syncName(){ $('hello').textContent = NAME.first ? 'Hi, ' + NAME.first : ''; }
+$('journeyFirst').value = NAME.first; $('journeyLast').value = NAME.last;
+['journeyFirst','journeyLast'].forEach(id => $(id).addEventListener('input', () => {
+  NAME.first = $('journeyFirst').value.trim(); NAME.last = $('journeyLast').value.trim();
+  try{ localStorage.setItem('gapfinder-name', JSON.stringify(NAME)); }catch(e){}
+  syncName();
+}));
+syncName();
+$('journeyRoadmap').onclick = () => {
+  if(!skills.length){ $('journeyFeedback').textContent = 'Add a skill to your profile before opening your roadmap.'; scrollToJourney('builderStop', true); return; }
+  location.hash = 'roadmap';
+};
+ 
+/* ---------- level switch (fresher / graduate) ---------- */
+let LEVEL = 'fresher';
+function setLevel(l){
+  LEVEL = l === 'graduate' ? 'graduate' : 'fresher';
+  document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.level === LEVEL));
+  $('intTitle').textContent = LEVEL === 'graduate' ? 'Graduate jobs' : 'Internships';
+  $('intSub').textContent = LEVEL === 'graduate' ? 'Entry-level roles for graduates, scored against your skills.' : 'Live listings, scored against your skills.';
+  $('go1').textContent = LEVEL === 'graduate' ? 'Find graduate jobs' : 'Find internships';
+  S = newState();
+  $('res1').innerHTML = ''; $('note1').innerHTML = ''; $('pager').innerHTML = '';
+  setLoading(false); updateBadge();
+}
+document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { if(b.dataset.level !== LEVEL) setLevel(b.dataset.level); });
+ 
+/* ---------- roadmap (rules over the listings already loaded; nothing invented) ---------- */
+const DONE = new Set();
+try{ JSON.parse(localStorage.getItem('gapfinder-learned') || '[]').forEach(s => DONE.add(s)); }catch(e){}
+function saveDone(){ try{ localStorage.setItem('gapfinder-learned', JSON.stringify([...DONE])); }catch(e){} }
+function markLearned(s){ DONE.add(s); saveDone(); addSkill(s); drawChips(); refreshAll(); }
+function unlearn(s){
+  DONE.delete(s); saveDone();
+  const i = skills.indexOf(s); if(i > -1) skills.splice(i,1);
+  drawChips(); refreshAll();
+}
+function drawRoadmap(){
+  const out = $('roadmapOut');
+  const items = allLoaded();
+  const learned = [...DONE].filter(s => skills.includes(s));
+  const learnedHtml = learned.length
+    ? `<div class="learned"><h3>Marked as learned</h3>${learned.map(s => `<div class="rm"><div class="rm-name">${esc(pretty(s))}</div><button class="ghost sm" type="button" data-unlearn="${esc(s)}">Undo</button></div>`).join('')}</div>` : '';
+  if(!items.length){
+    out.innerHTML = '<p class="empty">Run a search on the Internships page first. Your roadmap is built from the skills those listings ask for and you do not have yet.</p>' + learnedHtml;
+    return;
+  }
+  const count = {};
+  items.forEach(i => (i.tech_gaps||[]).forEach(g => count[g] = (count[g]||0) + 1));
+  const ranked = Object.keys(count).sort((a,b) => (count[b] - count[a]) || a.localeCompare(b));
+  if(!ranked.length){
+    out.innerHTML = '<p class="empty">No technical gaps found in the listings you have loaded. Search another area to widen your roadmap.</p>' + learnedHtml;
+    return;
+  }
+  const stages = [
+    {name:'Now', when:'Start here. These come up the most.', list:ranked.slice(0,3)},
+    {name:'Next', when:'Once the first few feel comfortable.', list:ranked.slice(3,7)},
+    {name:'Later', when:'Worth knowing, less urgent.', list:ranked.slice(7)}
+  ].filter(st => st.list.length);
+  const row = s => `<div class="rm"><div><div class="rm-name">${esc(pretty(s))}</div>
+    <div class="meta">Asked for in ${count[s]} of ${items.length} listing${items.length>1?'s':''}</div>
+    <div class="links" style="margin-top:6px"><a target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${q('learn '+s+' for beginners')}">Videos</a>
+    <a target="_blank" rel="noopener" href="https://www.google.com/search?q=${q(s+' practice problems for beginners')}">Exercises</a>
+    <a target="_blank" rel="noopener" href="https://leetcode.com/problemset/?search=${q(s)}">Problems</a></div></div>
+    <button class="ghost sm" type="button" data-learned="${esc(s)}">Mark as learned</button></div>`;
+  out.innerHTML = `<p class="note">Based on the ${items.length} listing${items.length>1?'s':''} you have loaded. Marking a skill as learned adds it to your profile and updates your match scores.</p>` +
+    stages.map(st => `<div class="stage"><h3>${st.name}</h3><p class="when">${st.when}</p>${st.list.map(row).join('')}</div>`).join('') + learnedHtml;
+}
+ 
+/* ---------- navigation ---------- */
+function refreshAll(){
+  render(); drawChallenges();
+  const v = curView();
+  if(v === 'stretch') drawStretch();
+  if(v === 'practice') drawPractice();
+  if(v === 'roadmap') drawRoadmap();
+}
+function show(){
+  const v = curView();
+  document.body.dataset.view = v;
+  if(v !== 'home') MANUAL.on = true;
+  views.forEach(x => $('v-' + x).style.display = x === v ? 'block' : 'none');
+  document.querySelectorAll('.nav-item').forEach(a => a.classList.toggle('on', a.dataset.v === v));
+  document.querySelectorAll('.nav a').forEach(a => {
+    const active = a.dataset.v === v;
+    a.classList.toggle('on', active);
+    if(active) a.setAttribute('aria-current','page');
+    else a.removeAttribute('aria-current');
+  });
+  $('profile').style.display = v === 'home' ? 'none' : 'block';
+  document.documentElement.classList.toggle('snap', v === 'home');
+  syncChrome(); refreshAll(); window.scrollTo(0,0);
+  if(v === 'home') updateJourneyPosition();
+}
+document.querySelectorAll('a[href="#home"]').forEach(a => a.addEventListener('click', e => {
+  if(curView() !== 'home') return;
+  e.preventDefault();
+  scrollTo({top:0, behavior: matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth'});
+  setTimeout(updateJourneyPosition, 50);
+}));
+addEventListener('hashchange', show);
+ 
+$('go1').onclick = startSearch;
+$('go2').onclick = runChallenges;
+$('minpct').onchange = render;
+showResumeState();
+show();
+</script>
+</body>
+</html>

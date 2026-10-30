@@ -1,0 +1,31 @@
+{
+  "challenges": [
+    {
+      "title": "Sample: Data Analytics Case Challenge",
+      "company": "Sample Organiser",
+      "reward": "Sample prize + certificate",
+      "deadline": "30 Nov' 26",
+      "apply_url": "",
+      "skills": ["Python", "SQL", "Data Analysis"],
+      "summary": "Placeholder entry. Participants analyse a dataset and present insights. Run the live agent to see real challenges."
+    },
+    {
+      "title": "Sample: Web App Build Sprint",
+      "company": "Sample Organiser",
+      "reward": "Sample internship interview",
+      "deadline": "5 Dec' 26",
+      "apply_url": "",
+      "skills": ["React", "JavaScript", "API"],
+      "summary": "Placeholder entry. Teams build a small web app in a weekend. Run the live agent to see real challenges."
+    },
+    {
+      "title": "Sample: Product Strategy Challenge",
+      "company": "Sample Organiser",
+      "reward": "Sample cash prize",
+      "deadline": "12 Dec' 26",
+      "apply_url": "",
+      "skills": ["Product Development", "Presentation"],
+      "summary": "Placeholder entry. Solve a business case and pitch it. Run the live agent to see real challenges."
+    }
+  ]
+}
